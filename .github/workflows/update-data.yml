@@ -1,0 +1,45 @@
+name: Refresh game data
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: refresh-game-data
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run data:update
+      - run: npm run check
+      - run: npm run build
+      - name: Propose the verified game data update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- data; then
+            echo "No new published Data Dragon version."
+            exit 0
+          fi
+          VERSION=$(node -p "JSON.parse(require('fs').readFileSync('data/manifest.json')).version")
+          BRANCH="data/patch-${VERSION}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -B "$BRANCH"
+          git add data
+          git commit -m "fix(data): refresh League patch ${VERSION}"
+          git push --force-with-lease origin "$BRANCH"
+          if ! gh pr view "$BRANCH" >/dev/null 2>&1; then
+            printf '%s\n' 'Replaces the current game catalog and source data, recording the version and checksums in the manifest.' '' 'Validation: TypeScript, ESLint, Prettier, checksums, complete-roster regression tests, and engine performance budget.' '' 'Review new or changed mechanics before merging. This workflow never downloads third-party builds.' > "$RUNNER_TEMP/patch-pr.md"
+            gh pr create --head "$BRANCH" --title "fix(data): refresh League patch ${VERSION}" --body-file "$RUNNER_TEMP/patch-pr.md"
+          fi

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+artifacts/
+*.log
+.env
+.data-staging-*/
+.data-update-lock/
+.data-backup/

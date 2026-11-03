@@ -1,0 +1,119 @@
+name: Release Please and Windows executable
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing draft release tag to rebuild; leave empty to run release-please'
+        required: false
+        type: string
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release-please:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ inputs.release_tag || steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        if: github.event_name != 'workflow_dispatch' || inputs.release_tag == ''
+        id: release
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          target-branch: main
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+      - name: Verify the draft selected for recovery
+        if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)
+          if [ "$draft" != true ]; then
+            echo "Recovery requires an existing draft release."
+            exit 1
+          fi
+  build:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+    runs-on: windows-latest
+    timeout-minutes: 25
+    env:
+      RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ needs.release-please.outputs.tag_name }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run release:verify
+      - run: npm run check
+      - run: npm run smoke
+      - run: npm run dist
+      - run: npm run smoke:package
+      - run: npm run release:assets
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-validation-evidence
+          path: |
+            artifacts/*.json
+            artifacts/*.png
+            artifacts/*.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-x64
+          if-no-files-found: error
+          path: |
+            dist/LoL-Utils-*-win-x64.exe
+            dist/SHA256SUMS.txt
+  release:
+    needs: [release-please, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-windows-x64
+          path: release
+      - name: Attach the verified assets to the release-please draft
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          cd release
+          sha256sum --check SHA256SUMS.txt
+          draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)
+          if [ "$draft" != true ]; then
+            echo "Refusing to replace assets on an already-published release."
+            exit 1
+          fi
+          gh release upload "$RELEASE_TAG" ./*.exe SHA256SUMS.txt --clobber
+          gh release view "$RELEASE_TAG" --json url --jq '"Release draft: " + .url' >> "$GITHUB_STEP_SUMMARY"

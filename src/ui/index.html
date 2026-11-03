@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://ddragon.leagueoflegends.com https://raw.communitydragon.org; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>LoL Utils</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <aside>
+      <div class="brand">
+        <span class="mark">L</span>
+        <div>LoL Utils<small>KNOW YOUR OPTIONS</small></div>
+      </div>
+      <nav aria-label="Main navigation">
+        <button data-view="companion" class="active">Companion</button>
+        <p class="nav-label">THE ENCYCLOPEDIA</p>
+        <button data-view="champions">Champions</button>
+        <button data-view="items">Items</button>
+        <button data-view="runes">Runes</button>
+        <button data-view="summoners">Summoner spells</button>
+        <button data-view="settings">Settings</button>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="dot"></span><span id="patch">Loading data…</span
+        ><small>PolyForm Noncommercial 1.0.0</small>
+      </div>
+    </aside>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">YOUR LOCAL LEAGUE COMPANION</p>
+          <h1 id="title">Companion</h1>
+        </div>
+        <span id="connection" role="status">Connecting…</span>
+      </header>
+      <div id="patch-warning" role="status" hidden></div>
+      <div id="message" role="status" hidden></div>
+      <section id="content" aria-live="polite"></section>
+      <footer>
+        LoL Utils isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot
+        Games or anyone officially involved in producing or managing League of Legends. League of
+        Legends and Riot Games are trademarks or registered trademarks of Riot Games, Inc. League of
+        Legends © Riot Games, Inc.
+      </footer>
+    </main>
+    <dialog id="detail">
+      <button id="close-detail" aria-label="Close details">Close ×</button>
+      <div id="detail-content"></div>
+    </dialog>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

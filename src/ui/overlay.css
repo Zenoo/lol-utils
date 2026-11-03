@@ -1,0 +1,57 @@
+body {
+  margin: 0;
+  color: #f1e6d2;
+  font:
+    13px 'Segoe UI',
+    sans-serif;
+  background: transparent;
+  user-select: none;
+}
+#skill,
+#shop {
+  background: #0b1523ed;
+  border: 1px solid #aa8a50;
+  border-radius: 7px;
+  padding: 13px 16px;
+  margin-bottom: 8px;
+}
+#skill {
+  font-size: 20px;
+  font-weight: 600;
+}
+.skill-marker {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+.skill-marker #skill {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 3px solid #ffe296;
+  border-radius: 5px;
+  background: transparent;
+  color: #fff1bf;
+  box-shadow: inset 0 0 9px #f5bd56b0;
+  text-align: right;
+  line-height: 16px;
+  font-size: 20px;
+  text-shadow: 0 1px 3px #000;
+}
+small {
+  color: #bda373;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.buy {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 13px;
+}
+.cost {
+  color: #eac785;
+  white-space: nowrap;
+}

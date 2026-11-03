@@ -1,0 +1,64 @@
+{
+  "name": "lol-utils",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local, explainable League of Legends companion",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "type": "module",
+  "main": "build/src/desktop/main.js",
+  "scripts": {
+    "start": "npm run build && tsx scripts/launch.ts",
+    "build": "tsc && tsx scripts/copy-ui.ts",
+    "smoke": "npm run build && tsx scripts/launch.ts --smoke-test",
+    "typecheck": "tsc --noEmit",
+    "data:update": "tsx scripts/update-data.ts",
+    "data:validate": "tsx scripts/validate-data.ts",
+    "test": "tsx --test test/*.test.ts",
+    "test:performance": "tsx scripts/benchmark.ts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run data:validate && npm test && npm run test:performance",
+    "pack": "npm run build && electron-builder --dir --x64 --publish never",
+    "dist": "npm run build && electron-builder --win portable --x64 --publish never",
+    "smoke:package": "tsx scripts/launch.ts --packaged --smoke-test",
+    "release:verify": "tsx scripts/release.ts verify",
+    "release:assets": "tsx scripts/release.ts assets"
+  },
+  "build": {
+    "appId": "dev.lolutils.companion",
+    "productName": "LoL Utils",
+    "files": [
+      "build/src/**/*",
+      "data/catalog.json",
+      "data/manifest.json",
+      "data/raw/**/*",
+      "LICENSE",
+      "NOTICE",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/koffi/**/*"
+    ],
+    "win": {
+      "target": "portable",
+      "artifactName": "LoL-Utils-${version}-win-${arch}.${ext}"
+    }
+  },
+  "dependencies": {
+    "koffi": "3.3.6",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "electron": "45.2.1",
+    "electron-builder": "26.18.0",
+    "eslint": "10.14.0",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1"
+  }
+}
