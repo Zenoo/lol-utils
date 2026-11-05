@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/Zenoo/lol-utils/compare/v0.2.1...v0.3.0) (2026-11-05)
+
+
+### Features
+
+* add data version checking and management scripts ([c701dbe](https://github.com/Zenoo/lol-utils/commit/c701dbe52c1a9197e08d07b9235aa76794022fe4))
+
+
+### Bug Fixes
+
+* **data:** refresh League patch 16.22.1 ([#3](https://github.com/Zenoo/lol-utils/issues/3)) ([89d5343](https://github.com/Zenoo/lol-utils/commit/89d53435a2f1d557e6625588f438cce22af30f81))
+
 ## [0.2.1](https://github.com/Zenoo/lol-utils/compare/v0.2.0...v0.2.1) (2026-11-03)
 
 
