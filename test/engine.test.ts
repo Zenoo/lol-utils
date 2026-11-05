@@ -1,7 +1,15 @@
 import { required } from '../src/core/assert.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Engine, activePlayer, eligible, growth, purchase, profile } from '../src/core/engine.js';
+import {
+  Engine,
+  activePlayer,
+  eligible,
+  growth,
+  purchase,
+  profile,
+  passiveKeys,
+} from '../src/core/engine.js';
 import type { Item } from '../src/core/types.js';
 import { catalog, game, player } from './fixtures.js';
 
@@ -248,4 +256,103 @@ test('Shen counters his sustaining physical laner first, then accounts for the r
     engine.scoreItem(required(engine.items.get(3075)), shen, live).score >
       engine.scoreItem(required(engine.items.get(3075)), shen, noHealing).score,
   );
+});
+
+test('zero gold keeps final targets, credits components and explains the same choices', () => {
+  const live = game([player('Jinx', 'CHAOS')]);
+  live.activePlayer.currentGold = 0;
+  live.allPlayers[0].items = [{ itemID: 1058, count: 1, slot: 0 }];
+  const saving = engine.nextBuys(annie, live);
+  assert.equal(saving.length, 3);
+  for (const result of saving) {
+    assert.ok(
+      result.item.rules?.tier === 5 ||
+        (result.item.tags.includes('Boots') && result.item.rules?.tier === 4),
+    );
+    assert.equal(result.cost, purchase(result.item, [1058], engine.items).cost);
+    assert.ok(result.reasons.length > 0);
+    assert.equal(result.affordable, false);
+  }
+  live.activePlayer.currentGold = 10000;
+  const rich = engine.nextBuys(annie, live);
+  assert.deepEqual(
+    rich.map((result) => result.item.id),
+    saving.map((result) => result.item.id),
+  );
+  assert.ok(rich.every((result) => result.affordable));
+});
+
+test('healing reduction cannot stack under different passive names or bypass conflicts by consuming an unrelated ingredient', () => {
+  const shen = required(catalog.champions.find((champ) => champ.alias === 'Shen'));
+  const live = game([player('Zaahen', 'CHAOS', { position: 'TOP' })]);
+  live.allPlayers[0] = player('Shen', 'ORDER', { riotId: 'Test#EUW', position: 'TOP' });
+  for (const first of [3075, 6609, 3165]) {
+    const ranked = engine.rank(shen, {
+      game: live,
+      role: 'TOP',
+      owned: [first, 1028],
+      limit: 1000,
+    });
+    assert.ok(
+      ranked.every((result) => !passiveKeys(result.item).includes('effect:healing-reduction')),
+    );
+  }
+  const upgrade = engine.rank(shen, { owned: [3076], limit: 1000 });
+  assert.ok(
+    upgrade.some((result) => result.item.id === 3075),
+    'Bramble Vest may upgrade to Thornmail',
+  );
+  const build = engine.build(shen, 11, 'TOP', live);
+  assert.equal(
+    build.filter((id) =>
+      passiveKeys(required(engine.items.get(id))).includes('effect:healing-reduction'),
+    ).length,
+    1,
+  );
+  assert.ok(build.includes(3075));
+  const suggestions = engine.nextBuys(shen, live);
+  assert.ok(
+    suggestions.filter((result) => passiveKeys(result.item).includes('effect:healing-reduction'))
+      .length <= 1,
+  );
+});
+
+test('global ally travel reduces Teleport priority without a champion-specific spell list', () => {
+  const shen = required(catalog.champions.find((champ) => champ.alias === 'Shen'));
+  const teleport = required(catalog.summoners.find((spell) => spell.alias === 'SummonerTeleport'));
+  assert.equal(profile(shen).globalTravel, true);
+  const pair = engine.summoners(shen, 'TOP', 'F');
+  assert.ok(![pair.spell1Id, pair.spell2Id].includes(teleport.id));
+  assert.ok(Object.values(engine.summoners(annie, 'TOP', 'F')).includes(teleport.id));
+});
+
+test('Shen builds retain magic resistance against mixed enemy teams after excluding duplicate Wounds', () => {
+  const shen = required(catalog.champions.find((champion) => champion.alias === 'Shen'));
+  for (const enemies of [
+    ['Zaahen', 'Veigar', 'Lux', 'Diana', 'KogMaw'],
+    ['Garen', 'LeeSin', 'Ahri', 'Jinx', 'Nautilus'],
+    ['Darius', 'JarvanIV', 'Syndra', 'Caitlyn', 'Lux'],
+  ]) {
+    const live = game(
+      enemies.map((alias, index) =>
+        player(alias, 'CHAOS', { position: index === 0 ? 'TOP' : undefined }),
+      ),
+    );
+    live.allPlayers[0] = player('Shen', 'ORDER', { riotId: 'Test#EUW', position: 'TOP' });
+    const build = engine.buildPlan(shen, 11, 'TOP', live);
+    assert.equal(build.length, 6);
+    assert.ok(
+      build.some((entry) => (engine.stats.get(entry.item.id)?.FlatSpellBlockMod ?? 0) > 0),
+      enemies.join(', '),
+    );
+    assert.ok(
+      build.filter((entry) => passiveKeys(entry.item).includes('effect:healing-reduction'))
+        .length <= 1,
+    );
+    assert.ok(build.every((entry) => entry.reasons.length > 0));
+    assert.deepEqual(
+      build.map((entry) => entry.item.id),
+      engine.build(shen, 11, 'TOP', live),
+    );
+  }
 });

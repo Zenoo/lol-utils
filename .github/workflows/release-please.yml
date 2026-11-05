@@ -100,7 +100,7 @@ jobs:
         with:
           name: release-windows-x64
           path: release
-      - name: Attach the verified assets to the release-please draft
+      - name: Attach verified assets and publish the release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -116,4 +116,5 @@ jobs:
             exit 1
           fi
           gh release upload "$RELEASE_TAG" ./*.exe SHA256SUMS.txt --clobber
-          gh release view "$RELEASE_TAG" --json url --jq '"Release draft: " + .url' >> "$GITHUB_STEP_SUMMARY"
+          gh release edit "$RELEASE_TAG" --draft=false
+          gh release view "$RELEASE_TAG" --json url --jq '"Published release: " + .url' >> "$GITHUB_STEP_SUMMARY"

@@ -19,6 +19,17 @@ export const plain = (text = '') =>
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+/** Shared effects can have different display names (Thorns, Hackshorn, Wounds). */
+export function passiveKeys(item: Item): string[] {
+  const names = [...item.description.matchAll(/<passive>(.*?)<\/passive>/gi)].map((match) =>
+    plain(match[1]).toLowerCase(),
+  );
+  if (item.rules?.values.GrievousAmount || /\bwounds\b/i.test(plain(item.description))) {
+    names.push('effect:healing-reduction');
+  }
+
+  return names;
+}
 const clamp = (n: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, n));
 const sum = (ns: number[]) => ns.reduce((a, b) => a + b, 0);
 export function profile(c: Champion, role = '') {
@@ -33,27 +44,61 @@ export function profile(c: Champion, role = '') {
     /next\s+(?:\{\{[^}]+\}\}\s+|\w+\s+)?attacks?[^.]*?(?:damage|slashes)|attacks?[^.]*?(?:additional|bonus)[^.]*damage/i.test(
       text,
     );
-  const attacks = Math.max(1 - clamp((tactical.style ?? 5) / 10), empoweredAttacks ? 0.85 : 0);
+  const tags = Object.values(c.source.championTagInfo ?? {}).join(' ');
+  const marksman = c.source.roles[0] === 'marksman' || /Hypercarry|Auto-attack/.test(tags);
+  const assassin = c.source.roles[0] === 'assassin';
+  const defender = c.source.roles[0] === 'tank';
+  const repeatedAttacks = c.spells.some((spell) => {
+    const ability = plain(spell.tooltip + ' ' + spell.description);
+
+    return (
+      /next[^.]*attacks|enhancedattacks/i.test(ability) &&
+      /gains?[^.]*attack speed|increas[^.]*attack speed/i.test(ability)
+    );
+  });
+  // An empowered attack is a proc opportunity, not proof of marksman attack frequency.
+  const attacks = marksman
+    ? 0.95
+    : assassin
+      ? 0.25
+      : repeatedAttacks
+        ? 0.65
+        : Math.min(0.55, 1 - clamp((tactical.style ?? 5) / 10));
+  const allyProtection = c.spells.some((spell) =>
+    /(?:heal|shield|restor)[^.]{0,100}(?:allied|ally)|(?:allied|ally)[^.]{0,100}(?:heal|shield|restor)/i.test(
+      plain(spell.description + ' ' + spell.tooltip),
+    ),
+  );
   // A secondary support tag must not turn every mid-lane mage into an enchanter.
   let support = c.source.roles[0] === 'support' ? play.utility / 3 : 0;
   if (role) {
-    support = role.toUpperCase() === 'UTILITY' ? play.utility / 3 : 0;
+    support = role.toUpperCase() === 'UTILITY' ? 1 : 0;
   }
 
   return {
     magic,
     attacks,
     empoweredAttacks,
+    repeatedAttacks,
+    marksman,
+    assassin,
+    defender,
+    critScaling: marksman || /critical strike|critically strike/.test(text),
     melee: tactical.attackType === 'melee',
     taunt: /taunt/.test(text),
+    globalTravel: c.spells.some(
+      (spell) =>
+        /teleport/i.test(spell.description + spell.tooltip) &&
+        /anywhere|allied champion|ally.s location/i.test(spell.description + spell.tooltip),
+    ),
     sustain: /\bheal(?:s|ing|ed)?\b|restor[^.]*health/.test(text) ? 1 : 0,
     tank: (play.durability ?? 1) / 3,
     support,
     cc: (play.crowdControl ?? 1) / 3,
     mobility: (play.mobility ?? 1) / 3,
     mana: c.partype.toLowerCase() === 'mana',
-    heal: /heal|shield/.test(text) ? 1 : 0,
-    burst: c.source.championTagInfo?.championTagPrimary === 'Burst' ? 1 : 1 - attacks,
+    heal: allyProtection ? 1 : 0,
+    burst: /Burst/.test(tags) || assassin ? 1 : 1 - attacks,
     text,
   };
 }
@@ -80,6 +125,8 @@ export function itemStats(item: Item): Record<string, number> {
     AbilityHasteMod: 'AbilityHaste',
     FlatMagicPenetrationMod: 'MagicPen',
     FlatPhysicalPenetrationMod: 'Lethality',
+    PercentHealingAmountMod: 'HealShieldPower',
+    PercentBaseMPRegenMod: 'ManaRegen',
   };
   for (const [from, to] of Object.entries(aliases)) {
     if (stats[from] !== undefined) {
@@ -305,37 +352,79 @@ export class Engine {
     projectedStats: Record<string, number | string> = {},
   ): { score: number; reasons: string[] } {
     const p = context,
-      stats = required(this.stats.get(item.id));
-    const ownStats = game?.activePlayer.championStats ?? projectedStats;
+      stats = { ...required(this.stats.get(item.id)) };
+    const effects = item.rules?.values ?? {};
+    const level = game?.activePlayer.level ?? 11;
+    if (effects.ADtoAD) {
+      stats.FlatPhysicalDamageMod =
+        (stats.FlatPhysicalDamageMod ?? 0) +
+        growth(champ.stats.attackdamage, champ.stats.attackdamageperlevel, level) * effects.ADtoAD;
+    }
+    const ownStats = { ...projectedStats, ...game?.activePlayer.championStats };
+    const offense =
+      (p.support > 0 && (p.defender || (p.heal && !p.marksman))
+        ? 0.25
+        : p.defender && !p.repeatedAttacks
+          ? 0.35
+          : 1) * (p.defender && Number(ownStats.offensiveItems ?? 0) >= 2 ? 0.45 : 1);
+    const attackDamage = Number(ownStats.attackDamage ?? champ.stats.attackdamage);
+    const crit = clamp(Number(ownStats.critChance ?? 0));
+    const critDamagePrice = this.prices.get('FlatCritDamageMod') ?? 25;
+    const healthRatio =
+      Number(ownStats.bonusHealth ?? 0) /
+      Math.max(1, growth(champ.stats.hp, champ.stats.hpperlevel, level));
     const weights: Record<string, number> = {
-      FlatMagicDamageMod:
-        p.magic * (1.2 - p.attacks * 0.3) * (1 - p.tank * 0.55) * (1.25 - p.teamMagic * 0.5),
+      FlatMagicDamageMod: p.magic * (1.2 - p.attacks * 0.3) * offense * (1.25 - p.teamMagic * 0.5),
       FlatPhysicalDamageMod:
-        (1 - p.magic) * (0.7 + p.attacks) * (1 - p.tank * 0.4) * (0.75 + p.teamMagic * 0.5),
+        (1 - p.magic) * (0.7 + p.attacks) * offense * (0.75 + p.teamMagic * 0.5),
       PercentAttackSpeedMod:
-        p.attacks *
-        (1.2 - p.magic * 0.3) *
+        ((p.attacks *
+          offense *
+          (1.2 - p.magic * 0.3) *
+          (p.critScaling || p.repeatedAttacks ? 1 : 0.5)) /
+          (1 + Number(ownStats.attackSpeedBonus ?? 0))) *
         Math.max(
           1,
           Number(ownStats.attackDamage ?? champ.stats.attackdamage) /
             Math.max(1, champ.stats.attackdamage),
         ),
-      FlatCritChanceMod: p.attacks * (1 - p.magic) * (1 - p.tank * 0.8),
-      FlatHPPoolMod: 0.25 + p.tank * 0.65,
-      FlatArmorMod: (0.3 + p.tank) * p.physical,
-      FlatSpellBlockMod: (0.3 + p.tank) * p.magical,
+      FlatCritChanceMod:
+        (p.critScaling ? 1 : 0.12) *
+        p.attacks *
+        offense *
+        (1 - p.magic) *
+        Math.min(3, attackDamage / champ.stats.attackdamage),
+      // Marginal expected attack damage from extra crit damage, priced against attack damage.
+      FlatCritDamageMod:
+        ((p.critScaling ? 1 : 0) *
+          p.attacks *
+          offense *
+          crit *
+          attackDamage *
+          (this.prices.get('FlatPhysicalDamageMod') ?? 35)) /
+        ((1 + crit * 0.75) * critDamagePrice),
+      PercentArmorPenetrationMod: (1 - p.magic) * offense * clamp(p.enemyArmor / 100),
+      FlatHPPoolMod: (0.12 + p.tank * (p.marksman ? 0.15 : 0.7)) / (1 + healthRatio),
+      FlatArmorMod:
+        (((0.3 + p.tank) * p.physical * (1 + healthRatio)) /
+          (1 + Number(ownStats.bonusArmor ?? 0) / 100)) *
+        (p.defender && /armor/.test(p.text) ? 1.35 : 1),
+      FlatSpellBlockMod:
+        ((0.3 + p.tank) * p.magical * (1 + healthRatio)) /
+        (1 + Number(ownStats.bonusMr ?? 0) / 100),
       FlatMPPoolMod: p.mana
         ? (0.4 + p.magic * 0.3) /
           (1 + Number(ownStats.resourceMax ?? champ.stats.mp) / Math.max(1, champ.stats.mp))
         : 0,
-      PercentLifeStealMod: p.attacks * 0.8,
+      PercentLifeStealMod: p.attacks * offense * 0.8,
       FlatMovementSpeedMod: 0.6,
       PercentMovementSpeedMod: 0.6,
       AbilityHaste:
         (1 - p.attacks * 0.6) *
+        (p.marksman ? 0.35 : 1) *
         (1 - Number(ownStats.abilityHaste ?? 0) / (100 + Number(ownStats.abilityHaste ?? 0))),
-      Lethality: (1 - p.magic) * (1 - p.attacks * 0.5),
-      MagicPen: p.magic,
+      Lethality: (1 - p.magic) * offense * (p.assassin ? 2 : 1 - p.attacks * 0.5),
+      MagicPen: p.magic * offense * (p.burst > 0.7 ? 1.5 : 1),
       HealShieldPower: p.heal * p.support * clamp(p.allyCarry, 1, 2),
       ManaRegen: p.mana ? p.support * 0.8 : 0,
       FlatHPRegenMod: 0.15 + p.tank * 0.2,
@@ -347,18 +436,43 @@ export class Engine {
       // Unpriced stats use labelled magnitude, marked as a model assumption in the UI.
       const reference =
         this.prices.get(key) ??
-        (key.includes('Percent') || key === 'HealShieldPower' || key === 'ManaRegen' ? 1000 : 25);
+        (key === 'MagicPen'
+          ? 50
+          : key.includes('Percent') || key === 'HealShieldPower' || key === 'ManaRegen'
+            ? 1000
+            : 25);
       contributions.push([key, Math.max(0, value) * reference * (weights[key] ?? 0)]);
     }
     let value = sum(contributions.map(([, n]) => n));
     const text = plain(item.description).toLowerCase();
+    const statReasons: Record<string, string> = {
+      FlatHPPoolMod: 'Health supports durability and health-scaling effects',
+      FlatArmorMod: 'Armor reduces incoming physical damage',
+      FlatSpellBlockMod: 'Magic resistance reduces incoming magic damage',
+      FlatMagicDamageMod: 'Ability power fits the magic-damage ability profile',
+      FlatPhysicalDamageMod: 'Attack damage fits physical damage and basic attacks',
+      PercentAttackSpeedMod: 'Attack speed supports frequent and empowered attacks',
+      FlatCritChanceMod: 'Critical strikes improve physical basic attacks',
+      AbilityHaste: 'Ability haste gives more frequent ability casts',
+      FlatMovementSpeedMod: 'Movement speed helps positioning and reaching targets',
+      PercentMovementSpeedMod: 'Movement speed helps positioning and reaching targets',
+      FlatMPPoolMod: 'Mana supports repeated ability use',
+      PercentLifeStealMod: 'Life steal restores health through basic attacks',
+      HealShieldPower: 'Heal and shield power strengthens ally protection',
+      MagicPen: 'Magic penetration improves damage against magic resistance',
+      Lethality: 'Lethality improves physical damage against armor',
+      ManaRegen: 'Mana regeneration sustains repeated support casts',
+    };
     const reasons = contributions
       .filter(([, n]) => n > 0)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 2)
-      .map(([key]) => `${key.replace(/Mod$|Flat|Percent/g, '')} suits champion profile`);
+      .map(
+        ([key]) =>
+          statReasons[key] ??
+          `${key.replace(/Mod$|Flat|Percent/g, '')} supports ${champ.name}'s stat profile`,
+      );
     const kind = questKind(item);
-    const effects = item.rules?.values ?? {};
     if (kind === 'jungle') {
       const damage = (effects.AvatarMaxHPBurnTotal ?? 0) * (1 + p.burst);
       const slow = (effects.AvatarSlowAmount ?? 0) * (1 - p.cc * 0.5);
@@ -409,7 +523,12 @@ export class Engine {
     }
     if ((effects.GrievousAmount || /(?:grievous )?wounds/.test(text)) && p.healing > 0.3) {
       const reactive = /when struck by an attack/.test(text);
-      const fit = reactive ? p.tank * (p.taunt ? 1.3 : 1) : 0.5 + p.attacks * 0.5;
+      // Match the application mechanism rather than rewarding every anti-heal equally.
+      const fit = reactive
+        ? p.tank * (p.taunt ? 1.3 : 1)
+        : /physical damage/.test(text)
+          ? (1 - p.magic) * (0.5 + p.attacks * 0.5)
+          : p.magic * (1 - p.tank * 0.55);
       value += item.gold.total * p.healing * fit * 0.65;
       reasons.push(
         'Healing reduction against enemy sustain' +
@@ -424,15 +543,25 @@ export class Engine {
       value += item.gold.total * p.physical * (0.5 + p.tank * 0.5);
       reasons.push('Attack damage reduction against physical threats');
     }
-    if (/spellblade/.test(text) && p.empoweredAttacks) {
-      value += item.gold.total * p.attacks * 0.5;
+    if (/spellblade/.test(text) && p.empoweredAttacks && !p.assassin && !p.support) {
+      value +=
+        item.gold.total *
+        Math.max(0.3, p.attacks) *
+        (stats.FlatMagicDamageMod ? p.magic : 1 - p.magic) *
+        0.5 *
+        (p.defender && !p.repeatedAttacks ? 0.25 : 1);
       reasons.push('Spellblade follows abilities that empower attacks');
       if (/on.hit effects an additional time/.test(text)) {
-        value += item.gold.total * p.attacks * 0.45;
+        value +=
+          item.gold.total *
+          p.attacks *
+          p.magic *
+          0.45 *
+          (p.defender && !p.repeatedAttacks ? 0.25 : 1);
         reasons.push('Repeats on-hit effects from empowered attacks');
       }
     }
-    if (effects.PrimaryTargetHPRatio && p.melee) {
+    if (effects.PrimaryTargetHPRatio && p.melee && !p.support && !p.assassin) {
       const health =
         Number(
           ownStats.maxHealth ??
@@ -443,7 +572,7 @@ export class Engine {
         effects.PrimaryTargetHPRatio *
         p.attacks *
         (this.prices.get('FlatPhysicalDamageMod') ?? 35);
-      value += item.gold.total * p.attacks * p.tank * 0.4;
+      value += item.gold.total * Math.max(0.3, p.attacks) * p.tank * 0.4;
       reasons.push('Health-scaling attack damage and cleave for melee waveclear');
     }
     if (/armor penetration/.test(text)) {
@@ -459,8 +588,129 @@ export class Engine {
       reasons.push('Tenacity against crowd control in enemy kits');
     }
     if (/on.hit|on hit/.test(text)) {
-      value += item.gold.total * p.attacks * 0.15;
+      value += item.gold.total * p.attacks * offense * 0.15;
       reasons.push('On-hit effect fits attack frequency');
+    }
+    if (
+      effects.UltimateHaste &&
+      /damag[^.]*ultimate|ultimate[^.]*burn/i.test(text) &&
+      /damage/.test(plain(champ.spells[3]?.tooltip)) &&
+      !p.marksman
+    ) {
+      value +=
+        (effects.UltimateHaste * (this.prices.get('AbilityHaste') ?? 30) +
+          (effects.BaseDamage ?? 0) * 3) *
+        p.magic *
+        offense;
+      reasons.push('Ultimate damage benefits from ultimate haste and the damage zone');
+    }
+    if (effects.SpellItemDamageAmp) {
+      value += item.gold.total * effects.SpellItemDamageAmp * p.magic * offense;
+      reasons.push('Low-health damage amplification supports magic burst');
+    }
+    if (/dash in target direction/.test(text)) {
+      value += item.gold.total * p.magic * offense * (1 - p.mobility) * 0.3;
+      reasons.push('Active dash helps reach ability range');
+    }
+    if (effects.BaseDamagePerTickTOOLTIPONLY && p.melee) {
+      value +=
+        item.gold.total *
+        (p.defender ? (p.repeatedAttacks ? 0.25 : 0.7) : 0.15) *
+        (1 - p.support * 0.6);
+      reasons.push('Nearby burn adds sustained damage and melee waveclear');
+    }
+    if (effects.ActiveMS && effects.MSSlow && p.melee) {
+      value += item.gold.total * (1 - p.mobility * 0.5) * (1 - p.magic) * offense * 0.5;
+      reasons.push('Cleave and an active slow help a melee fighter stick to targets');
+    }
+    if (effects.BoltMinPercent && p.marksman && !p.melee) {
+      value += item.gold.total * p.attacks * 0.35;
+      reasons.push('Additional bolts spread ranged attacks and on-hit effects');
+    }
+    if (effects.MaxDamageAmp && effects.MaxRange && p.marksman) {
+      value +=
+        item.gold.total *
+        effects.MaxDamageAmp *
+        Math.min(1, champ.stats.attackrange / effects.MaxRange) *
+        3;
+      reasons.push('Attack-range damage amplification suits a ranged carry');
+    }
+    if (effects.MeleeBaseShield && p.melee && !p.support) {
+      value +=
+        (effects.MeleeBaseShield +
+          Math.max(0, attackDamage - champ.stats.attackdamage) *
+            (effects.MeleeBonusADShieldRatio ?? 0)) *
+        (this.prices.get('FlatHPPoolMod') ?? 2.67) *
+        1.5;
+      reasons.push('Repeated attack and ability trades trigger a protective shield');
+    }
+    if (effects.HealBaseADRatio && p.melee && !p.assassin && !p.support) {
+      value += item.gold.total * p.tank * Math.min(1, p.attacks * 2) * (p.defender ? 0.15 : 0.65);
+      reasons.push('First-hit healing supports extended melee trades');
+    }
+    if (effects.ShredPerStack && !p.support) {
+      value +=
+        item.gold.total *
+        (1 - p.magic) *
+        effects.ShredPerStack *
+        (effects.MaxStacks ?? 1) *
+        (0.8 + p.sustain * 0.5);
+      reasons.push('Repeated physical damage stacks armor reduction');
+    }
+    if (effects.PercentCurrentHPMelee && /energized/.test(text) && p.melee && !p.support) {
+      value += ((item.gold.total * effects.PercentCurrentHPMelee) / 100) * p.burst * 3;
+      value += (effects.LethalityBonusModMelee ?? 0) * 25 * (1 - p.magic) * (p.assassin ? 1 : 0.5);
+      reasons.push(
+        'Ability-triggered energized damage and temporary lethality support short trades',
+      );
+    }
+    if (p.assassin && /stealth wards|unseen by enemies/.test(text)) {
+      value += item.gold.total * 0.3;
+      reasons.push('Out-of-vision attacks and ward clearing support an assassin approach');
+    }
+    if (effects.BaseOOCMS && !p.support) {
+      value +=
+        effects.BaseOOCMS *
+        (this.prices.get('FlatMovementSpeedMod') ?? 12) *
+        (1 - p.mobility) *
+        (p.melee ? 2 : 1);
+      reasons.push('Out-of-combat movement speed supports roaming and reaching fights');
+    }
+    if (effects.BaseShieldRatio && effects.ADtoAD && p.melee) {
+      value +=
+        (Number(ownStats.bonusHealth ?? 0) + (stats.FlatHPPoolMod ?? 0)) *
+        effects.BaseShieldRatio *
+        (this.prices.get('FlatHPPoolMod') ?? 2.67) *
+        0.5;
+      reasons.push('Bonus health increases the low-health survival shield');
+    }
+    if (effects.MeleeAuraAttackSpeed && p.support && p.cc > 0) {
+      value += item.gold.total * effects.MeleeAuraAttackSpeed * p.cc * 1.5;
+      reasons.push('Crowd control grants nearby allies attack speed');
+    }
+    if (effects.ChainHeal && p.support && p.heal) {
+      value += item.gold.total * (effects.ChainHeal + (effects.ChainShield ?? 0)) * 1.5;
+      reasons.push('Ally healing and shielding chain to additional teammates');
+    }
+    if (effects.ShieldMinTOOLTIP && p.support) {
+      value += item.gold.total * p.support * (0.4 + p.tank * 0.7);
+      reasons.push('Team shield protects allies during an engage');
+    }
+    if (effects.DamageRedirection && p.support) {
+      value += item.gold.total * p.support * p.tank * effects.DamageRedirection * 7;
+      reasons.push('Durability lets you redirect damage away from an allied carry');
+    }
+    if (effects.HealMin && effects.HealMax && p.support) {
+      value += item.gold.total * p.support * (0.2 + p.heal * 0.5);
+      reasons.push('Area healing supports team protection');
+    }
+    if (effects.APPerManaRegen && p.support && p.heal) {
+      value +=
+        item.gold.total *
+        p.support *
+        (Number(ownStats.manaRegen ?? 0) + (stats.ManaRegen ?? 0)) *
+        0.25;
+      reasons.push('Owned mana regeneration scales healing power and ability power');
     }
     if (item.rules?.values.APAmp) {
       value +=
@@ -487,6 +737,10 @@ export class Engine {
     }
     if (stats.FlatMPPoolMod && !p.mana) {
       value -= stats.FlatMPPoolMod * (this.prices.get('FlatMPPoolMod') ?? 1);
+    }
+    if (stats.FlatCritChanceMod && !p.critScaling) {
+      value -= stats.FlatCritChanceMod * (this.prices.get('FlatCritChanceMod') ?? 4000) * 0.65;
+      reasons.push('Critical strike budget is discounted for a kit without sustained crit attacks');
     }
     if (Number(ownStats.critChance ?? 0) >= 1 && stats.FlatCritChanceMod) {
       value -= stats.FlatCritChanceMod * (this.prices.get('FlatCritChanceMod') ?? 1000);
@@ -527,6 +781,13 @@ export class Engine {
     const context = this.context(champ, game, role, laneWeight);
     const eligibility = { role: role || context.me?.position, owned: questOwned, spells, planning };
     const projectedStats: Record<string, number> = {
+      offensiveItems: own.filter(
+        (item) =>
+          item.rules?.tier === 5 &&
+          ((this.stats.get(item.id)?.FlatPhysicalDamageMod ?? 0) > 0 ||
+            (this.stats.get(item.id)?.FlatMagicDamageMod ?? 0) > 0 ||
+            (this.stats.get(item.id)?.PercentAttackSpeedMod ?? 0) > 0),
+      ).length,
       resourceMax: champ.stats.mp,
       attackDamage: champ.stats.attackdamage,
     };
@@ -536,6 +797,11 @@ export class Engine {
       AbilityHaste: 'abilityHaste',
       FlatCritChanceMod: 'critChance',
       FlatMPPoolMod: 'resourceMax',
+      ManaRegen: 'manaRegen',
+      PercentAttackSpeedMod: 'attackSpeedBonus',
+      FlatHPPoolMod: 'bonusHealth',
+      FlatArmorMod: 'bonusArmor',
+      FlatSpellBlockMod: 'bonusMr',
     };
     for (const item of own) {
       for (const [key, target] of Object.entries(projectionKeys)) {
@@ -543,11 +809,6 @@ export class Engine {
           (projectedStats[target] ?? 0) + (this.stats.get(item.id)?.[key] ?? 0);
       }
     }
-    const ownPassives = new Set(
-      own.flatMap((i) =>
-        [...i.description.matchAll(/<passive>(.*?)<\/passive>/g)].map((m) => m[1].toLowerCase()),
-      ),
-    );
     const occupied = owned.length;
     // Quest currency items can live outside the ordinary six inventory slots. They still
     // contribute recipe credit and mutual-exclusion groups, but not occupied bag capacity.
@@ -613,10 +874,14 @@ export class Engine {
         ) {
           return false;
         }
-        const names = [...i.description.matchAll(/<passive>(.*?)<\/passive>/g)].map((m) =>
-          m[1].toLowerCase(),
+        const remainingPassives = new Set(
+          remaining.flatMap((id) => {
+            const item = this.items.get(id);
+
+            return item ? passiveKeys(item) : [];
+          }),
         );
-        if (names.some((n) => ownPassives.has(n)) && !recipe(i).consumed.length) {
+        if (passiveKeys(i).some((name) => remainingPassives.has(name))) {
           return false;
         }
 
@@ -665,80 +930,29 @@ export class Engine {
       gold: game.activePlayer.currentGold,
       map: game.gameData.mapNumber,
     };
-    const targets = this.rank(champ, { ...opts, limit: 10 });
-    const ownsRoleItem = questOwned.some((id) => {
-      const item = this.items.get(id);
+    // Gold changes the displayed remaining cost, never the completed target.
+    const effects = new Set<string>();
 
-      return item && questKind(item);
-    });
-    const evolvedSmite =
-      spells?.some((spell) => spell.includes('Smite') && spell !== 'SummonerSmite') ?? false;
-    const result: Recommendation[] =
-      ['JUNGLE', 'UTILITY'].includes(role?.toUpperCase() ?? '') &&
-      !ownsRoleItem &&
-      !options.roleQuestPurchased &&
-      !evolvedSmite
-        ? this.starters(champ, opts.gold, role, { owned, questOwned, spells, game })
-            .filter((result) => questKind(result.item))
-            .slice(0, 2)
-        : [];
-    for (const target of targets) {
-      if (result.length === 3) {
-        break;
-      }
-      if (target.affordable) {
-        result.push(target);
-        continue;
-      }
-      const missing: Item[] = [];
-      const bag = [...owned];
-      const walk = (item: Item, seen = new Set<number>()) => {
-        if (seen.has(item.id)) {
-          return;
+    return this.rank(champ, { ...opts, completed: true, limit: this.catalog.items.length })
+      .filter((result) => {
+        const keys = passiveKeys(result.item);
+        if (keys.some((key) => effects.has(key))) {
+          return false;
         }
-        const at = bag.indexOf(item.id);
-        if (at !== -1) {
-          bag.splice(at, 1);
+        keys.forEach((key) => effects.add(key));
 
-          return;
-        }
-        missing.push(item);
-        for (const id of item.from ?? []) {
-          const i = this.items.get(Number(id));
-          if (i) {
-            walk(i, new Set(seen).add(item.id));
-          }
-        }
-      };
-      walk(target.item);
-      const component = missing
-        .filter(
-          (i) =>
-            eligible(i, champ, opts.map, { role, owned: questOwned, spells }) &&
-            !result.some((r) => r.item.id === i.id),
-        )
-        .map((item) => ({ item, ...purchase(item, owned, this.items) }))
-        .filter((r) => r.cost <= opts.gold && owned.length - r.consumed.length + 1 <= 6)
-        .sort((a, b) => b.item.gold.total - a.item.gold.total)[0];
-      if (component) {
-        result.push({
-          item: component.item,
-          cost: component.cost,
-          affordable: true,
-          score: target.score,
-          targetId: target.item.id,
-          reasons: [`Builds toward ${target.item.name}`, ...target.reasons],
-        });
-      } else if (!result.some((r) => r.item.id === target.item.id)) {
-        result.push(target);
-      }
-    }
-
-    return result;
+        return true;
+      })
+      .slice(0, 3);
   }
+
   build(champ: Champion, map = 11, role = '', game?: LiveGame) {
+    return this.buildPlan(champ, map, role, game).map((entry) => entry.item.id);
+  }
+  buildPlan(champ: Champion, map = 11, role = '', game?: LiveGame) {
     const reward = role.toUpperCase() === 'UTILITY' ? this.roleRewards(champ, role)[0] : undefined;
-    const owned: number[] = reward ? [reward.item.id] : [];
+    const result: Recommendation[] = reward ? [reward] : [];
+    const owned: number[] = result.map((entry) => entry.item.id);
     while (owned.length < 6) {
       const ranked = this.rank(champ, {
         owned,
@@ -758,9 +972,10 @@ export class Engine {
         break;
       }
       owned.push(next.item.id);
+      result.push(next);
     }
 
-    return owned;
+    return result;
   }
   starters(
     champ: Champion,
@@ -888,7 +1103,8 @@ export class Engine {
     level = 30,
     available?: number[],
   ) {
-    const p = profile(champ);
+    const p = profile(champ, role);
+    role = role.toUpperCase();
     const spells = this.catalog.summoners.filter(
       (s) =>
         s.modes.includes(mode) &&
@@ -918,7 +1134,7 @@ export class Engine {
         n += p.support * 3;
       }
       if (/teleport/.test(text)) {
-        n += ['TOP', 'MIDDLE'].includes(role) ? 4 : 0;
+        n += ['TOP', 'MIDDLE'].includes(role) ? (p.globalTravel ? 0.5 : 4) : 0;
       }
       if (/move.*speed|movement speed/.test(text)) {
         n += p.attacks * (1 - p.mobility) * 3;

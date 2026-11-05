@@ -1,0 +1,16 @@
+[
+  {
+    "provider": "u.gg",
+    "url": "https://u.gg/lol/champions/shen/build?patch=16_21",
+    "status": "HTTP 403 challenge",
+    "observedAt": "2026-11-05",
+    "note": "No bypass attempted. Indexed Annie/Jinx pages were stale or omitted item names; excluded from numerical comparisons."
+  },
+  {
+    "provider": "blitz.gg",
+    "url": "https://blitz.gg/lol/champions/Shen/build",
+    "status": "robots.txt blocks automated access",
+    "observedAt": "2026-11-05",
+    "note": "Excluded. No build facts invented or challenge bypass attempted."
+  }
+]

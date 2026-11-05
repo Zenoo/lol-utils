@@ -1,4 +1,3 @@
-import { required } from '../core/assert.js';
 import type { Engine } from '../core/engine.js';
 import type { Champion, Raw, Settings, LiveGame } from '../core/types.js';
 import type { LocalApi } from './local-api.js';
@@ -65,7 +64,7 @@ export async function importItems(
   }
   const endpoint = `/lol-item-sets/v1/item-sets/${summonerId}/sets`;
   const existing = itemSetsSchema.parse(await api.request('GET', endpoint));
-  const build = engine.build(champ, map, role, game);
+  const build = engine.buildPlan(champ, map, role, game);
   const set = {
     uid: `lol-utils-${champ.id}-${map}`,
     title: `LoL Utils · ${champ.name} · ${engine.catalog.version}`,
@@ -77,15 +76,13 @@ export async function importItems(
     associatedMaps: [map],
     preferredItemSlots: [],
     blocks: [
-      {
-        type: 'Starter alternatives',
-        items: engine
-          .starters(champ, Infinity, role)
-          .map((result) => ({ id: String(result.item.id), count: 1 })),
-      },
-      ...build.map((id, i) => ({
-        type: `${questKind(required(engine.items.get(id))) === 'support' ? 'After support quest completion' : i + 1}. ${required(engine.items.get(id)).name}`,
-        items: [{ id: String(id), count: 1 }],
+      ...engine.starters(champ, Infinity, role).map(({ item, reasons }) => ({
+        type: `Starter alternative: ${item.name} - ${reasons.at(-1) ?? 'Early lane resources'}`,
+        items: [{ id: String(item.id), count: 1 }],
+      })),
+      ...build.map(({ item, reasons }, i) => ({
+        type: `${questKind(item) === 'support' ? 'After support quest completion' : i + 1}. ${item.name} - ${reasons.at(-1) ?? 'Fits the champion and enemy team'}`,
+        items: [{ id: String(item.id), count: 1 }],
       })),
     ],
   };

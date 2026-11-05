@@ -35,3 +35,11 @@ A different or unverifiable game patch displays a persistent warning in the main
 Local API contracts and native overlay behavior must still be validated against a running current client. Automated mocks do not prove that LCU writes succeed in a real lobby. Skill-marker alignment, real-match FPS, fullscreen behavior, multiple monitors, and long-session GPU and memory stability require the [manual acceptance checks](testing.md).
 
 For code conventions, data updates, automation, licensing, and distribution requirements, see [development](development.md).
+
+The item browser opens on Summoner's Rift each time. Filter by tier, boots, stat/category, or maximum gold; hidden variants and unavailable entries are opt-in. With variants hidden, same-name entries use the lowest-ID representative available for the selected map. The rune browser groups the five paths into keystone and minor rows, followed by the three official stat-shard rows.
+
+The shop overlay appears at centre left with completed target items, cached icons, short explanations, and remaining recipe costs. Low gold labels a target as a saving option. Starter choices remain in the pregame plan. The skill marker follows the bottom-centred ability row using the game's HUD scale and physical viewport before Windows DPI conversion; exact alignment still requires checking in a real match.
+
+Click outside a detail dialog or press Escape to close it. Item categories appear as clickable tags: choosing one closes the dialog and filters the item browser. Recipe upgrades follow the browser's selected game mode. The finishing cost is the extra gold paid after owning every recipe component, and is already included in the total price.
+
+Patch status also checks Data Dragon's published versions while League is closed. An outdated bundled snapshot produces a warning; a failed public check is labelled as unverified. Checks run asynchronously, are cached for six hours, and retry after one minute on failure. Long client build identifiers are shortened to the matching published patch when available, or to the major/minor patch when the exact revision is unknown. Version warnings do not block imports or guidance.

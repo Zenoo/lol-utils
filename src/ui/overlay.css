@@ -55,3 +55,38 @@ small {
   color: #eac785;
   white-space: nowrap;
 }
+
+.buy img {
+  border: 1px solid #aa8a50;
+  border-radius: 4px;
+  flex: 0 0 42px;
+}
+.buy-details {
+  flex: 1;
+  min-width: 0;
+}
+.buy-details > span:first-child {
+  display: block;
+  font-weight: 600;
+}
+.buy-reasons {
+  color: #c3cbd5;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 5px 0 0;
+}
+#shop {
+  box-sizing: border-box;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+body:not(.skill-marker) {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+}
+body:not(.skill-marker) #shop {
+  width: 100%;
+  margin: 0;
+}

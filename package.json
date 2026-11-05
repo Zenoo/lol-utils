@@ -23,7 +23,9 @@
     "dist": "npm run build && electron-builder --win portable --x64 --publish never",
     "smoke:package": "tsx scripts/launch.ts --packaged --smoke-test",
     "release:verify": "tsx scripts/release.ts verify",
-    "release:assets": "tsx scripts/release.ts assets"
+    "release:assets": "tsx scripts/release.ts assets",
+    "compare:builds": "tsx scripts/build-comparison/run.ts",
+    "compare:capture": "tsx scripts/build-comparison/capture.ts"
   },
   "build": {
     "appId": "dev.lolutils.companion",

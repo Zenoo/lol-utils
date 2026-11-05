@@ -5,6 +5,7 @@ import path from 'node:path';
 import { loadCatalog } from '../core/data.js';
 import { CompanionService } from './service.js';
 import { defaults, loadSettings, validateSettings } from './settings.js';
+import { championTooltips } from '../core/spell-tooltips.js';
 import { LeagueHud, skillBounds } from './hud.js';
 import { windowsForeground, windowsKeyDown } from './windows.js';
 import { ShopShortcut, shortcutDown, registerShopShortcut } from './shop-shortcut.js';
@@ -53,6 +54,37 @@ async function start() {
   let latestOverlay: OverlayState | null = null,
     shopVisible = false,
     focusTimer: ReturnType<typeof setInterval> | undefined;
+  // Fetch each patch-pinned icon once in the main process. The overlay only receives data URLs.
+  const itemIcons = new Map<number, string>();
+  const pendingIcons = new Set<number>();
+  function loadIcons(state: OverlayState) {
+    for (const buy of state.buys) {
+      if (itemIcons.has(buy.id) || pendingIcons.has(buy.id)) {
+        continue;
+      }
+      const item = catalog.items.find((entry) => entry.id === buy.id);
+      if (!item) {
+        continue;
+      }
+      pendingIcons.add(buy.id);
+      const url = `https://ddragon.leagueoflegends.com/cdn/${manifest.version}/img/item/${encodeURIComponent(item.image.full)}`;
+      void fetch(url, { signal: AbortSignal.timeout(5000) })
+        .then(async (response) => {
+          if (!response.ok) {
+            throw new Error('Icon unavailable');
+          }
+          itemIcons.set(
+            buy.id,
+            `data:image/png;base64,${Buffer.from(await response.arrayBuffer()).toString('base64')}`,
+          );
+          renderOverlay();
+        })
+        .catch(() => {
+          itemIcons.set(buy.id, '');
+        })
+        .finally(() => pendingIcons.delete(buy.id));
+    }
+  }
   const lastOverlayPayload = { shop: '', skill: '' };
   let disposed = false;
   let overlayFailures = 0;
@@ -138,10 +170,10 @@ async function start() {
               skillBounds(rect, required(latestOverlay.skill.key), hud.scale),
             )
           : {
-              x: Math.round(dip.x + dip.width - 350),
-              y: Math.round(dip.y + 140),
-              width: 330,
-              height: 260,
+              x: Math.round(dip.x + 24),
+              y: Math.round(dip.y + (dip.height - Math.min(480, dip.height)) / 2),
+              width: Math.min(390, dip.width),
+              height: Math.min(480, dip.height),
             };
       const old = window.getBounds();
       if (
@@ -154,7 +186,10 @@ async function start() {
       }
       const payload = {
         skill: kind === 'skill' ? latestOverlay.skill : { key: null, reason: '' },
-        buys: kind === 'shop' ? latestOverlay.buys : [],
+        buys:
+          kind === 'shop'
+            ? latestOverlay.buys.map((buy) => ({ ...buy, icon: itemIcons.get(buy.id) ?? '' }))
+            : [],
         champion: latestOverlay.champion,
       };
       const encoded = JSON.stringify(payload);
@@ -177,6 +212,9 @@ async function start() {
     },
     (state) => {
       latestOverlay = state;
+      if (state) {
+        loadIcons(state);
+      }
       if (state && !focusTimer) {
         focusTimer = setInterval(() => {
           try {
@@ -274,6 +312,10 @@ async function start() {
         tags: i.tags,
         image: i.image,
         maps: i.maps,
+        tier: i.rules?.tier ?? 0,
+        available: Boolean(i.gold.purchasable && i.source?.inStore),
+        variant: i.source?.displayInItemSets === false,
+        champion: i.source?.requiredChampion ?? '',
       })),
       runes: catalog.runeStyles.map((s) => ({
         ...s,
@@ -282,16 +324,43 @@ async function start() {
         })),
       })),
       summoners: catalog.summoners,
+      shardSlots: catalog.perkStyles.styles[0].slots
+        .filter((slot) => slot.type === 'kStatMod')
+        .map((slot) => slot.perks),
       shards: catalog.perks.filter((p) => p.id >= 5000 && p.id < 6000),
     } satisfies AppData;
   });
+  const championDetails = new Map<number, ReturnType<typeof loadChampionDetail>>();
+  async function loadChampionDetail(id: number) {
+    const champion = catalog.champions.find((entry) => entry.id === id);
+    if (!champion) {
+      return undefined;
+    }
+    const raw: unknown = await readFile(
+      path.join(root, 'data/raw/champions', `${champion.alias}.game.json`),
+      'utf8',
+    )
+      .then((bytes) => JSON.parse(bytes))
+      .catch(() => ({}));
+
+    return championTooltips(champion, raw);
+  }
   ipcMain.handle('detail', (event, kind, id) => {
     authorize(event);
     if (!Number.isInteger(id)) {
       throw new Error('Invalid ID');
     }
     if (kind === 'champions') {
-      return catalog.champions.find((c) => c.id === id);
+      let detail = championDetails.get(id);
+      if (!detail) {
+        detail = loadChampionDetail(id);
+        championDetails.set(id, detail);
+        if (championDetails.size > 64) {
+          championDetails.delete(required(championDetails.keys().next().value));
+        }
+      }
+
+      return detail;
     }
     if (kind === 'items') {
       return catalog.items.find((i) => i.id === id);
@@ -320,8 +389,8 @@ async function start() {
       starters: service.engine.starters(champ, Infinity, role).map((result) => result.item),
       questRewards: service.engine.roleRewards(champ, role).map((result) => result.item),
       build: service.engine
-        .build(champ, 11, role, game)
-        .map((id) => required(catalog.items.find((i) => i.id === id))),
+        .buildPlan(champ, 11, role, game)
+        .map(({ item, reasons }) => ({ ...item, reasons })),
       ranked: service.engine
         .rank(champ, { limit: 6, role, game })
         .map((r) => ({ ...r, item: { id: r.item.id, name: r.item.name } })),

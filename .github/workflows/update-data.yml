@@ -19,14 +19,38 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Check the published version before installing dependencies
+        id: version
+        run: node scripts/check-data-version.ts
+      - name: Check for an existing update PR
+        if: steps.version.outputs.changed == 'true'
+        id: pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          COUNT=$(gh pr list --state open --head "data/patch-${VERSION}" --json number --jq length)
+          if [ "$COUNT" -gt 0 ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Patch ${VERSION} already has an open update PR; skipping rebuild."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
       - run: npm ci
+        if: steps.version.outputs.changed == 'true' && steps.pending.outputs.exists == 'false'
       - run: npm run data:update
+        if: steps.version.outputs.changed == 'true' && steps.pending.outputs.exists == 'false'
       - run: npm run check
+        if: steps.version.outputs.changed == 'true' && steps.pending.outputs.exists == 'false'
       - run: npm run build
+        if: steps.version.outputs.changed == 'true' && steps.pending.outputs.exists == 'false'
       - name: Propose the verified game data update
+        if: steps.version.outputs.changed == 'true' && steps.pending.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           if git diff --quiet -- data; then
             echo "No new published Data Dragon version."
             exit 0
@@ -38,7 +62,7 @@ jobs:
           git checkout -B "$BRANCH"
           git add data
           git commit -m "fix(data): refresh League patch ${VERSION}"
-          git push --force-with-lease origin "$BRANCH"
+          node scripts/push-data-branch.ts "$BRANCH"
           if ! gh pr view "$BRANCH" >/dev/null 2>&1; then
             printf '%s\n' 'Replaces the current game catalog and source data, recording the version and checksums in the manifest.' '' 'Validation: TypeScript, ESLint, Prettier, checksums, complete-roster regression tests, and engine performance budget.' '' 'Review new or changed mechanics before merging. This workflow never downloads third-party builds.' > "$RUNNER_TEMP/patch-pr.md"
             gh pr create --head "$BRANCH" --title "fix(data): refresh League patch ${VERSION}" --body-file "$RUNNER_TEMP/patch-pr.md"

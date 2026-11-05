@@ -123,6 +123,14 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
     await waitFor('document.querySelectorAll("#plan .build-item").length >= 6');
     if (
       !(await evaluate(
+        `Array.from(document.querySelectorAll('#plan .build-reason')).length === 6 && Array.from(document.querySelectorAll('#plan .build-reason')).every(node => node.textContent.trim().length > 10)`,
+      ))
+    ) {
+      throw new Error('Build progression explanations are missing');
+    }
+
+    if (
+      !(await evaluate(
         `Array.from(document.querySelectorAll('#plan .build-item')).slice(0, 6).every((row, i) => row.dataset.step === String(i + 1) && Boolean(row.querySelector('button img')) && Boolean(row.querySelector('button')?.getAttribute('aria-label')))`,
       ))
     ) {
@@ -130,7 +138,7 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
     }
     if (
       !(await evaluate(
-        'document.querySelectorAll("#plan .icon-button[data-slot]").length === 5 && document.querySelectorAll("#plan .rune-page img").length === 9',
+        'document.querySelectorAll("#plan .icon-button[data-slot]").length === 5 && document.querySelectorAll("#plan .rune-choice.selected img").length === 6',
       ))
     ) {
       throw new Error('Skill or rune icons are missing');
@@ -177,6 +185,15 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
       imports: { runes: 'Imported', summoners: 'Imported', items: 'Imported' },
     });
     await waitFor('document.querySelectorAll(".import-status.success").length === 3');
+    // Client selection must populate the plan even when the local picker was cleared.
+    await evaluate(`(() => {
+      const input = document.querySelector('#champion');
+      input.value = ''; input.dispatchEvent(new Event('input'));
+    })()`);
+    main.webContents.send('state', { ...initialState, selectedId: 98, role: 'top' });
+    await waitFor(
+      `document.querySelector('#champion').value === 'Shen' && document.querySelectorAll('#plan .build-item').length === 6 && !document.querySelector('#plan .empty')`,
+    );
     // DOM changes precede Chromium's next paint in a hidden window.
     await evaluate(
       'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true))))',
@@ -191,10 +208,30 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
     if (championCount < 100) {
       throw new Error('Champion encyclopedia failed');
     }
-    await evaluate('document.querySelector(\'#results [data-id="1"]\').click()');
+    await evaluate(`document.querySelector('#results [data-id="30"]').click()`);
+    await waitFor(
+      `document.querySelector('#detail').open && document.querySelector('#detail-content h2').textContent.includes('Karthus')`,
+    );
+    if (
+      !(await evaluate(
+        `document.querySelectorAll('.ability')[0].textContent.includes('35% AP') && !document.querySelectorAll('.ability')[0].textContent.includes('qdamage:')`,
+      ))
+    ) {
+      throw new Error('Damage tooltip did not resolve archived formulas');
+    }
+    await evaluate(
+      `document.querySelector('#close-detail').click(); document.querySelector('#results [data-id="1"]').click()`,
+    );
     await waitFor(
       'document.querySelector("#detail").open && document.querySelectorAll(".ability").length === 4',
     );
+    if (
+      !(await evaluate(
+        `Array.from(document.querySelectorAll('#champ-stats .stat span')).map(node => node.textContent).includes('Magic resistance') && !Array.from(document.querySelectorAll('#champ-stats .stat span')).some(node => ['hp', 'mp', 'spellblock', 'attackspeed'].includes(node.textContent))`,
+      ))
+    ) {
+      throw new Error('Champion stats expose raw keys');
+    }
     await evaluate(
       'document.querySelector("#champ-level").value = "18"; document.querySelector("#champ-level").dispatchEvent(new Event("input"))',
     );
@@ -206,6 +243,126 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
       'document.querySelector("#close-detail").click(); document.querySelector("[data-view=items]").click()',
     );
     const itemCount = await evaluate('document.querySelectorAll("#results .card").length');
+    await evaluate(`document.querySelector('#results [data-id="3003"]').click()`);
+    await waitFor(
+      `document.querySelector('#detail').open && document.querySelector('#detail-content h2').textContent.includes('Archangel')`,
+    );
+    if (
+      !(await evaluate(
+        `Array.from(document.querySelectorAll('#detail-content .stat span')).every(node => !/FlatMPPoolMod|FlatMagicDamageMod/.test(node.textContent)) && document.querySelector('#detail-content').textContent.includes('Finishing cost is the extra gold') && document.querySelectorAll('.category-tag').length > 0 && !document.querySelector('.category-tags').textContent.includes('SpellDamage')`,
+      ))
+    ) {
+      throw new Error('Item modal repeats raw stats or raw category keys');
+    }
+    if (
+      !(await evaluate(
+        `getComputedStyle(document.querySelector('#detail')).overflow === 'hidden' && getComputedStyle(document.querySelector('.modal-scroll')).overflowY === 'auto' && document.querySelector('.modal-scroll').clientHeight < document.querySelector('#detail').clientHeight`,
+      ))
+    ) {
+      throw new Error('Modal scrollbar is not inset from its border');
+    }
+    await evaluate(`document.querySelector('#detail-content h2').click()`);
+    if (!(await evaluate(`document.querySelector('#detail').open`))) {
+      throw new Error('Inside click closed the modal');
+    }
+    main.webContents.sendInputEvent({
+      type: 'mouseDown',
+      x: 4,
+      y: 4,
+      button: 'left',
+      clickCount: 1,
+    });
+    main.webContents.sendInputEvent({ type: 'mouseUp', x: 4, y: 4, button: 'left', clickCount: 1 });
+    await waitFor(`!document.querySelector('#detail').open`);
+    await evaluate(`document.querySelector('#results [data-id="3003"]').click()`);
+    await waitFor(`document.querySelector('#detail').open`);
+    await evaluate(
+      `Array.from(document.querySelectorAll('.category-tag')).find(button => button.textContent === 'Ability power').click()`,
+    );
+    await waitFor(
+      `!document.querySelector('#detail').open && document.querySelector('#item-tag').value === 'Ability power'`,
+    );
+    if (
+      !(await evaluate(
+        `Boolean(document.querySelector('#results [data-id="3003"]')) && !document.querySelector('#results [data-id="1036"]')`,
+      ))
+    ) {
+      throw new Error('Category click did not apply the item filter');
+    }
+    await evaluate(
+      `document.querySelector('#item-tag').value = ''; document.querySelector('#item-tag').dispatchEvent(new Event('input')); document.querySelector('#item-map').value = '12'; document.querySelector('#item-map').dispatchEvent(new Event('input')); document.querySelector('#results [data-id="1028"]').click()`,
+    );
+    await waitFor(`document.querySelector('#detail').open`);
+    const upgradesMatchMode = await evaluate(`(async () => {
+      const ids = Array.from(document.querySelectorAll('#item-upgrades [data-id]')).map(node => Number(node.dataset.id));
+      if (!ids.length) { return false; }
+      const items = await Promise.all(ids.map(id => window.companion.detail('items', id)));
+      return items.every(item => item.maps['12']);
+    })()`);
+    if (!upgradesMatchMode) {
+      throw new Error('Builds-into entries ignore the selected mode');
+    }
+    await evaluate(
+      `document.querySelector('#close-detail').click(); document.querySelector('[data-view=champions]').click(); document.querySelector('[data-view=items]').click()`,
+    );
+
+    if (
+      !(await evaluate(
+        `document.querySelector('#item-map').value === '11' && !document.querySelector('#item-variants').checked && (() => { const names = Array.from(document.querySelectorAll('#results strong')).map(x => x.textContent); return names.length === new Set(names).size; })()`,
+      ))
+    ) {
+      throw new Error('Default Rift view contains duplicate variants');
+    }
+    await evaluate(
+      `document.querySelector('#item-tier').value = '5'; document.querySelector('#item-tier').dispatchEvent(new Event('input'))`,
+    );
+    if (
+      !(await evaluate(
+        `document.querySelectorAll('#results .card').length > 50 && !document.querySelector('#results [data-id="1028"]')`,
+      ))
+    ) {
+      throw new Error('Legendary filter failed');
+    }
+    await evaluate(
+      `document.querySelector('#item-tier').value = '0'; document.querySelector('#item-tier').dispatchEvent(new Event('input'))`,
+    );
+    if (
+      !(await evaluate(
+        `Boolean(document.querySelector('#results [data-id="1028"]')) && !document.querySelector('#results [data-id="1031"]')`,
+      ))
+    ) {
+      throw new Error('Basic tier filter failed');
+    }
+    await evaluate(
+      `document.querySelector('#item-tier').value = '4'; document.querySelector('#item-tier').dispatchEvent(new Event('input'))`,
+    );
+    if (
+      !(await evaluate(
+        `Boolean(document.querySelector('#results [data-id="1031"]')) && !document.querySelector('#results [data-id="1028"]')`,
+      ))
+    ) {
+      throw new Error('Epic tier filter failed');
+    }
+    await evaluate(
+      `document.querySelector('#item-tier').value = ''; document.querySelector('#item-tier').dispatchEvent(new Event('input'))`,
+    );
+    await evaluate(
+      `document.querySelector('#item-variants').checked = true; document.querySelector('#item-unavailable').checked = true; document.querySelector('#item-unavailable').dispatchEvent(new Event('input')); document.querySelector('#results [data-id="3901"]').click()`,
+    );
+    await waitFor(
+      `document.querySelector('#detail').open && document.querySelector('#detail-content h2').textContent.includes('Fire at Will')`,
+    );
+    if (
+      await evaluate(
+        `document.querySelector('#detail-content h2').textContent.includes('<rarityLegendary>')`,
+      )
+    ) {
+      throw new Error('Item name leaked markup');
+    }
+    await evaluate(
+      `document.querySelector('#close-detail').click(); document.querySelector('#item-variants').checked = false; document.querySelector('#item-unavailable').checked = false; document.querySelector('#item-unavailable').dispatchEvent(new Event('input'))`,
+    );
+
     await alphabetical('#results .card strong');
     await evaluate(
       `document.querySelector('#search').value = 'boots'; document.querySelector('#search').dispatchEvent(new Event('input'))`,
@@ -227,7 +384,13 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
     if ((await evaluate('document.querySelectorAll("[data-kind=runes]").length')) < 50) {
       throw new Error('Rune encyclopedia failed');
     }
-    await alphabetical('#results .card strong');
+    if (
+      !(await evaluate(
+        'document.querySelectorAll(".rune-tree").length === 5 && document.querySelectorAll(".rune-tree .rune-slot").length === 20',
+      ))
+    ) {
+      throw new Error('Rune tree slots do not match the five official paths');
+    }
     await evaluate('document.querySelector("[data-view=summoners]").click()');
     await alphabetical('#results .card strong');
     await evaluate('document.querySelector("[data-view=settings]").click()');
@@ -246,21 +409,37 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
         overlay.webContents.send('overlay', {
           champion: 'Test',
           skill: { key: i % 2 ? 'Q' : null, label: 'Attack speed', reason: 'Smoke fixture' },
-          buys: [
-            {
-              id: 1,
-              name: 'Test component',
-              cost: 300,
-              affordable: true,
-              reasons: ['Smoke fixture'],
-            },
-          ],
+          buys: ['Thornmail', 'Titanic Hydra', 'Dusk and Dawn'].map((name, index) => ({
+            id: index + 1,
+            name,
+            icon: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=',
+            cost: 2450 + index * 200,
+            affordable: false,
+            reasons: [
+              'Armor reduces incoming physical damage',
+              'Healing reduction against enemy sustain; taunt forces attacks to trigger it',
+            ],
+          })),
         });
       }
       const rows = await overlay.webContents.executeJavaScript(
         'document.querySelectorAll(".buy").length',
       );
-      if (rows !== 1) {
+      if (
+        !(await overlay.webContents.executeJavaScript(
+          `Boolean(document.querySelector('.buy img[src^="data:image/png;base64,"]')) && document.querySelector('.buy-reasons').textContent.includes('taunt forces attacks')`,
+        ))
+      ) {
+        throw new Error('Overlay item icon or explanation missing');
+      }
+      if (
+        !(await overlay.webContents.executeJavaScript(
+          `Array.from(document.querySelectorAll('.buy')).every(row => row.getBoundingClientRect().bottom <= innerHeight)`,
+        ))
+      ) {
+        throw new Error('Overlay explanations are clipped');
+      }
+      if (rows !== 3) {
         throw new Error('Overlay repeated-update regression');
       }
       const skillText: unknown = await overlay.webContents.executeJavaScript(
@@ -279,6 +458,10 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
       await writeFile(
         path.join(artifacts, 'overlay-memory.json'),
         JSON.stringify({ before, after, updates: 200 }, null, 2),
+      );
+      await overlay.webContents.executeJavaScript(`document.querySelector('#skill').hidden = true`);
+      await overlay.webContents.executeJavaScript(
+        'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true))))',
       );
       await writeFile(
         path.join(artifacts, 'overlay.png'),

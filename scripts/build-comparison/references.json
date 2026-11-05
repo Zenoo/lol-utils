@@ -1,0 +1,313 @@
+[
+  {
+    "champion": "Shen",
+    "role": "TOP",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/shen/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.21",
+    "coreBuilds": [
+      [3748, 2510, 3075],
+      [3748, 2510, 3143],
+      [3748, 2510, 2504]
+    ],
+    "boots": [3047, 3111],
+    "observedAt": "2026-11-05T22:06:33.051Z",
+    "population": "Global Emerald+, ranked solo/duo; first three displayed core alternatives and top two boots",
+    "kind": "statistics",
+    "sourceSha256": "77ebb39f709cf9c7ec57702ad93f4afc898fac38093bc6acfa13438933d44742"
+  },
+  {
+    "champion": "Annie",
+    "role": "MIDDLE",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/annie/build/mid?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.21",
+    "coreBuilds": [
+      [3118, 3152, 4645],
+      [3118, 4646, 4645],
+      [3118, 4645, 4646]
+    ],
+    "boots": [3020, 3158],
+    "observedAt": "2026-11-05T22:06:33.800Z",
+    "population": "Global Emerald+, ranked solo/duo; first three displayed core alternatives and top two boots",
+    "kind": "statistics",
+    "sourceSha256": "0c10e051f1c8a0e3e663302d5cdfc3e2cec209a2d45bc14477c83e1196737864"
+  },
+  {
+    "champion": "Jinx",
+    "role": "BOTTOM",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/jinx/build/adc?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.21",
+    "coreBuilds": [
+      [2523, 3085, 3031],
+      [2523, 3085, 3036],
+      [3032, 3085, 3031]
+    ],
+    "boots": [3006, 3008],
+    "observedAt": "2026-11-05T22:06:34.564Z",
+    "population": "Global Emerald+, ranked solo/duo; first three displayed core alternatives and top two boots",
+    "kind": "statistics",
+    "sourceSha256": "a68e2d75526d13d043a5a2fa03fa367c732915c6753804bcd16a763f1dce8130"
+  },
+  {
+    "champion": "Leona",
+    "role": "UTILITY",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/leona/build/support?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.21",
+    "coreBuilds": [
+      [3190, 3109, 2524],
+      [3190, 3109, 3075],
+      [3190, 3075, 2504]
+    ],
+    "boots": [3047, 3111],
+    "observedAt": "2026-11-05T22:06:35.329Z",
+    "population": "Global Emerald+, ranked solo/duo; first three displayed core alternatives and top two boots",
+    "kind": "statistics",
+    "sourceSha256": "a7731e7a5b9ae61e5bfde3446aa0288520b13065f0333d7d8b013c138a91d751"
+  },
+  {
+    "champion": "Darius",
+    "role": "TOP",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/darius/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.21",
+    "coreBuilds": [
+      [3142, 3742, 6333],
+      [3142, 3742, 4401],
+      [3142, 3742, 3053]
+    ],
+    "boots": [3047, 3111],
+    "observedAt": "2026-11-05T22:06:36.154Z",
+    "population": "Global Emerald+, ranked solo/duo; first three displayed core alternatives and top two boots",
+    "kind": "statistics",
+    "sourceSha256": "4eb8ca89e2b0be111ffec5fca98df0d7aff26f5061b25b4c8845eae8e0f483e8"
+  },
+  {
+    "champion": "LeeSin",
+    "role": "JUNGLE",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/leesin/build/jungle?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.21",
+    "coreBuilds": [
+      [6692, 3071, 6333],
+      [6692, 6610, 6333],
+      [6698, 6699, 3814]
+    ],
+    "boots": [3047, 3111],
+    "observedAt": "2026-11-05T22:06:37.405Z",
+    "population": "Global Emerald+, ranked solo/duo; first three displayed core alternatives and top two boots",
+    "kind": "statistics",
+    "sourceSha256": "d1d15c2af388bdafa2aae28d45e34d13b30250e60c415d992647fc71918541b2"
+  },
+  {
+    "champion": "Ahri",
+    "role": "MIDDLE",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/ahri/build/mid?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.21",
+    "coreBuilds": [
+      [3118, 4645, 3157],
+      [3118, 4645, 3089],
+      [3118, 3100, 3089]
+    ],
+    "boots": [3020, 3158],
+    "observedAt": "2026-11-05T22:06:38.446Z",
+    "population": "Global Emerald+, ranked solo/duo; first three displayed core alternatives and top two boots",
+    "kind": "statistics",
+    "sourceSha256": "daa419ec2de43bf41b7a4fb1047d023475bcf6636ba53768db804fad7d031f38"
+  },
+  {
+    "champion": "Garen",
+    "role": "TOP",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/garen/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.21",
+    "coreBuilds": [
+      [6631, 3046, 3033],
+      [6631, 3046, 3742],
+      [6631, 3033, 3046]
+    ],
+    "boots": [3006, 3009],
+    "observedAt": "2026-11-05T22:06:39.698Z",
+    "population": "Global Emerald+, ranked solo/duo; first three displayed core alternatives and top two boots",
+    "kind": "statistics",
+    "sourceSha256": "2237e7dd2457d9c70b616304d0d09d983ec01d26911dfade57e1e39f1d8c173a"
+  },
+  {
+    "champion": "Soraka",
+    "role": "UTILITY",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/soraka/build/support?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.21",
+    "coreBuilds": [
+      [6617, 3107, 6621],
+      [6617, 6621, 3107],
+      [6617, 3107, 3222]
+    ],
+    "boots": [3158, 3009],
+    "observedAt": "2026-11-05T22:06:40.551Z",
+    "population": "Global Emerald+, ranked solo/duo; first three displayed core alternatives and top two boots",
+    "kind": "statistics",
+    "sourceSha256": "6cded61f7ef047156d0fb744970830a305bca0ef734d00263b0a033617077c4d"
+  },
+  {
+    "champion": "Khazix",
+    "role": "JUNGLE",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/khazix/build/jungle?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.21",
+    "coreBuilds": [
+      [3179, 6699, 2520],
+      [3179, 6699, 3814],
+      [3179, 6699, 6694]
+    ],
+    "boots": [3158, 3111],
+    "observedAt": "2026-11-05T22:06:41.563Z",
+    "population": "Global Emerald+, ranked solo/duo; first three displayed core alternatives and top two boots",
+    "kind": "statistics",
+    "sourceSha256": "d4d56f00079ff82373aa865bce3ad2c6d91200889ac3a3b197e2c74f9a53a420"
+  },
+  {
+    "champion": "Malphite",
+    "role": "TOP",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/malphite/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.21",
+    "coreBuilds": [
+      [3068, 3075, 3110],
+      [3118, 4646, 4645],
+      [3068, 3075, 2504]
+    ],
+    "boots": [3047, 3111],
+    "observedAt": "2026-11-05T22:06:42.374Z",
+    "population": "Global Emerald+, ranked solo/duo; first three displayed core alternatives and top two boots",
+    "kind": "statistics",
+    "sourceSha256": "469494c9ae6aa3ab67048d1c7015ba6ff739e03875004ac6065b4ffa1a843fb7"
+  },
+  {
+    "champion": "Kayle",
+    "role": "TOP",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/kayle/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.21",
+    "coreBuilds": [
+      [3115, 2510, 3089],
+      [3115, 2510, 4645],
+      [3115, 2510, 3116]
+    ],
+    "boots": [3009, 3006],
+    "observedAt": "2026-11-05T22:06:43.170Z",
+    "population": "Global Emerald+, ranked solo/duo; first three displayed core alternatives and top two boots",
+    "kind": "statistics",
+    "sourceSha256": "0b31c9e53e405b52377b543f3568c5726b57c032437313785d174cc57548e921"
+  },
+  {
+    "champion": "Annie",
+    "role": "MIDDLE",
+    "provider": "mobafire.com",
+    "url": "https://www.mobafire.com/league-of-legends/champion/annie-1",
+    "observedAt": "2026-11-05",
+    "patch": "16.21",
+    "population": "Displayed champion build summary; population retained in linked source",
+    "kind": "statistics",
+    "coreBuilds": [
+      [3118, 3152, 4645],
+      [3118, 4646, 4645]
+    ],
+    "boots": [3020, 3158],
+    "note": "Page heading 26.21; statistical table labels 16.21. First two displayed core paths."
+  },
+  {
+    "champion": "Jinx",
+    "role": "BOTTOM",
+    "provider": "mobafire.com",
+    "url": "https://www.mobafire.com/league-of-legends/build/s2026-21-easy-to-read-simple-1v9-live-ama-full-guide-updated-650672",
+    "observedAt": "2026-11-05",
+    "patch": "16.21",
+    "population": "Community guide",
+    "kind": "guide",
+    "coreBuilds": [
+      [3032, 3085, 3031],
+      [2523, 3085, 3031]
+    ],
+    "boots": [3006],
+    "note": "Yunfang S2026.21 guide lists Yun Tal/Hexoptics first-item alternatives and Runaan/Infinity Edge second/third. Seven-item example is not treated as a six-item build."
+  },
+  {
+    "champion": "Soraka",
+    "role": "UTILITY",
+    "provider": "mobafire.com",
+    "url": "https://www.mobafire.com/league-of-legends/build/26-21-actioners-soraka-support-guide-638014",
+    "observedAt": "2026-11-05",
+    "patch": "16.21",
+    "population": "Community guide",
+    "kind": "guide",
+    "coreBuilds": [[6617, 3107, 6621]],
+    "boots": [3009],
+    "note": "Actioner 26.21 guide; Dream Maker is a quest reward, excluded from purchased core comparison."
+  },
+  {
+    "champion": "Leona",
+    "role": "UTILITY",
+    "provider": "mobafire.com",
+    "url": "https://www.mobafire.com/league-of-legends/champion/leona-79?page=2",
+    "observedAt": "2026-11-05",
+    "patch": "16.21",
+    "population": "Displayed champion build summary; population retained in linked source",
+    "kind": "statistics",
+    "coreBuilds": [
+      [3190, 3109, 2524],
+      [3190, 3075, 2504]
+    ],
+    "boots": [3047, 3111],
+    "note": "26.21 page; same statistical build sequence as OP.GG, not independent expert evidence."
+  },
+  {
+    "champion": "Garen",
+    "role": "TOP",
+    "provider": "mobafire.com",
+    "url": "https://www.mobafire.com/league-of-legends/build/26-21-challenger-garen-top-guide-642197",
+    "observedAt": "2026-11-05",
+    "patch": "16.21",
+    "population": "Community guide",
+    "kind": "guide",
+    "coreBuilds": [
+      [6631, 3142, 6699],
+      [6631, 3046, 3036],
+      [6631, 3053, 3161]
+    ],
+    "boots": [3009, 3006],
+    "note": "Federals1 26.21 standard, full-crit and bruiser paths; boots removed from combat order. Guide intentionally differs from statistical default."
+  },
+  {
+    "champion": "Shen",
+    "role": "TOP",
+    "provider": "mobafire.com",
+    "url": "https://www.mobafire.com/league-of-legends/build/shen-cooking-26-20-647518",
+    "observedAt": "2026-11-05",
+    "patch": "16.20",
+    "population": "Community guide",
+    "kind": "guide",
+    "coreBuilds": [[2510, 3748, 3110]],
+    "boots": [3047],
+    "note": "26.20+ guide, excluded from default patch-matched metrics; generic Boots in core is not counted as completed boots."
+  },
+  {
+    "champion": "Shen",
+    "role": "TOP",
+    "provider": "lolalytics.com",
+    "url": "https://lolalytics.com/lol/shen/build/",
+    "observedAt": "2026-11-05",
+    "patch": "16.21",
+    "population": "Displayed champion build summary; population retained in linked source",
+    "kind": "statistics",
+    "coreBuilds": [
+      [3748, 2510, 2524],
+      [3748, 2510, 3742]
+    ],
+    "boots": [3047],
+    "note": "16.21 Emerald+ global page; displayed core plus the two Item 4 alternatives. This is not an observed exact six-item sequence."
+  }
+]

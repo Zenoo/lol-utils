@@ -609,7 +609,23 @@ dialog {
   border-radius: 14px;
   width: min(850px, 90vw);
   max-height: 90vh;
-  padding: 30px;
+  padding: 8px;
+  overflow: hidden;
+}
+.modal-scroll {
+  max-height: calc(90vh - 18px);
+  overflow: auto;
+  scrollbar-gutter: stable;
+  padding: 22px;
+}
+.category-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+.category-tag {
+  cursor: pointer;
 }
 dialog::backdrop {
   background: #030811b8;
@@ -653,4 +669,97 @@ summary {
   .columns {
     grid-template-columns: 1fr;
   }
+}
+
+.item-filters {
+  margin: 16px 0;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.item-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.item-filters select {
+  color: inherit;
+  background: #172334;
+  border: 1px solid #40516a;
+  border-radius: 6px;
+  padding: 10px;
+}
+.item-filters input[type='number'] {
+  width: 120px;
+}
+.rune-trees {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.rune-tree {
+  text-align: center;
+  min-width: 0;
+}
+.rune-slot {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-top: 1px solid #334154;
+}
+.rune-choice {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.rune-choice small {
+  font-size: 11px;
+}
+.rune-choice .icon-button {
+  border-radius: 50%;
+}
+.rune-choice.selected .icon-button {
+  border: 2px solid #edc777;
+  box-shadow: 0 0 10px #edc77766;
+}
+.rune-choice.unselected {
+  opacity: 0.4;
+}
+.keystones .icon-button {
+  width: 56px;
+  height: 56px;
+}
+#plan .rune-trees {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+#plan .rune-tree {
+  padding: 8px;
+}
+#plan .rune-slot {
+  gap: 5px;
+}
+#plan .rune-choice small {
+  display: none;
+}
+#plan .rune-choice .icon-button {
+  width: 36px;
+  height: 36px;
+}
+
+.build-progression .build-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  text-align: left;
+  width: 100%;
+}
+.build-progression .build-item .icon-button {
+  flex-shrink: 0;
+}
+.build-progression .build-item small {
+  margin-top: 4px;
 }

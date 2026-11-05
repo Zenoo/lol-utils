@@ -1,0 +1,14 @@
+[
+  { "champion": "Shen", "role": "TOP", "group": "development" },
+  { "champion": "Annie", "role": "MIDDLE", "group": "development" },
+  { "champion": "Jinx", "role": "BOTTOM", "group": "development" },
+  { "champion": "Leona", "role": "UTILITY", "group": "development" },
+  { "champion": "Darius", "role": "TOP", "group": "development" },
+  { "champion": "LeeSin", "role": "JUNGLE", "group": "development" },
+  { "champion": "Ahri", "role": "MIDDLE", "group": "validation" },
+  { "champion": "Garen", "role": "TOP", "group": "validation" },
+  { "champion": "Soraka", "role": "UTILITY", "group": "validation" },
+  { "champion": "Khazix", "role": "JUNGLE", "group": "validation" },
+  { "champion": "Malphite", "role": "TOP", "group": "validation" },
+  { "champion": "Kayle", "role": "TOP", "group": "validation" }
+]

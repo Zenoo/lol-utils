@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { required } from '../src/core/assert.js';
 import type { Champion } from '../src/core/types.js';
 import { publishData, recoverData, removeDataStage } from './data-storage.js';
+import { latestDataVersion } from './check-data-version.js';
 import {
   championIndexSchema,
   championDetailSchema,
@@ -74,13 +75,7 @@ export async function updateData({ force = false } = {}) {
   const stage = path.join(parent, `.data-staging-${process.pid}`);
   try {
     await recoverData(root);
-    const versions = z
-      .array(z.string())
-      .parse(await fetchJson('https://ddragon.leagueoflegends.com/api/versions.json'));
-    const version = versions[0];
-    if (!/^\d+\.\d+\.\d+$/.test(version)) {
-      throw new Error('Invalid upstream version');
-    }
+    const version = await latestDataVersion();
     const old = await readFile(path.join(root, 'manifest.json'), 'utf8')
       .then((text) => manifestSchema.parse(JSON.parse(text)))
       .catch(() => null);

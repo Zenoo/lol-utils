@@ -6,7 +6,7 @@ document.body.classList.toggle(
   'skill-marker',
   new URLSearchParams(location.search).get('kind') === 'skill',
 );
-// No animation loop, assets, network requests, or game-state calculations in this renderer.
+// No animation loop, network requests, or game-state calculations in this renderer.
 window.overlay.onUpdate((state) => {
   skillBox.hidden = !state.skill?.key;
   skillBox.textContent = state.skill?.key ? '+' : '';
@@ -27,7 +27,21 @@ window.overlay.onUpdate((state) => {
       const cost = document.createElement('span');
       cost.className = 'cost';
       cost.textContent = `${item.affordable ? '' : 'Save · '}${Math.ceil(item.cost)}g`;
-      row.append(name, cost);
+      const image = document.createElement('img');
+      image.alt = '';
+      image.width = image.height = 42;
+      if (item.icon?.startsWith('data:image/png;base64,')) {
+        image.src = item.icon;
+      } else {
+        image.hidden = true;
+      }
+      const details = document.createElement('div');
+      details.className = 'buy-details';
+      const reason = document.createElement('p');
+      reason.className = 'buy-reasons';
+      reason.textContent = item.reasons.slice(-2).join(' / ');
+      details.append(name, cost, reason);
+      row.append(image, details);
 
       return row;
     }),

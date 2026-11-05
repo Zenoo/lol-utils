@@ -1,5 +1,7 @@
 import { required } from '../core/assert.js';
 import { autocomplete, byName } from './autocomplete.js';
+import { championStatLabel } from './champion-stats.js';
+import { itemCategories } from './item-categories.js';
 import type {
   AppData,
   Champion,
@@ -26,6 +28,9 @@ let initial: AppData;
 let currentView = 'companion';
 let selectedId: number | undefined;
 let planGeneration = 0;
+let itemMap = '11';
+let itemCategory = '';
+let itemFilters: (() => void) | undefined;
 const escape = (value: unknown = '') =>
   String(value).replace(/[&<>"']/g, (c) =>
     required({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]),
@@ -67,7 +72,12 @@ function iconButton(
     data-kind="${kind}"
     data-id="${id}"
     ${slot !== undefined ? `data-slot="${slot}"` : ''}
-    aria-label="${escape(name)}"
+    aria-label="${escape(
+      name
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    )}"
   >
     <span class="icon-fallback" aria-hidden="true">${escape(name.slice(0, 2))}</span>
     ${url ? `<img src="${escape(url)}" alt="" loading="lazy" />` : ''}
@@ -184,7 +194,7 @@ async function showTooltip(target: HTMLElement) {
     }
     description = description.replace(/\{\{\s*(.*?)\s*\}\}/g, '[$1]');
     const img = target.querySelector<HTMLImageElement>('img');
-    hover.innerHTML = `<div class="tooltip-heading">${img ? `<img src="${escape(img.src)}" alt="" />` : ''}<strong>${escape(name)}</strong></div><p class="tooltip-meta">${escape(meta)}</p><div class="tooltip-description">${text(description)}</div>`;
+    hover.innerHTML = `<div class="tooltip-heading">${img ? `<img src="${escape(img.src)}" alt="" />` : ''}<strong>${text(name)}</strong></div><p class="tooltip-meta">${escape(meta)}</p><div class="tooltip-description">${text(description)}</div>`;
     (modal.open ? modal : document.body).append(hover);
     hover.hidden = false;
     target.setAttribute('aria-describedby', hover.id);
@@ -233,6 +243,10 @@ async function detail(kind: string, id: number) {
         <h3>Champion statistics</h3>
         <label>Level <input id="champ-level" type="number" min="1" max="18" value="1" /></label>
         <div id="champ-stats"></div>
+        <p class="muted">
+          Ability values separated by / follow skill rank. AP and AD scalings remain formulas;
+          champion-level values are labelled.
+        </p>
         <h3 class="entry-heading">${skillButton(c, -1)}${escape(c.passive.name)}</h3>
         <p>${text(c.passive.description)}</p>
         ${c.spells
@@ -241,9 +255,7 @@ async function detail(kind: string, id: number) {
               /* HTML */ `<div class="ability">
                 <h3 class="entry-heading">${skillButton(c, i)}${escape(s.name)}</h3>
                 <p>${text(s.description)}</p>
-                <p>
-                  ${text(s.tooltip.replace(/\{\{\s*(.*?)\s*\}\}/g, '[$1: dynamic value unavailable]'))}
-                </p>
+                <p>${text(s.tooltip)}</p>
                 ${stats({ 'Max rank': s.maxrank, Cooldown: s.cooldown, Cost: s.cost, Range: s.range })}
                 <details>
                   <summary>Published scaling and effect data</summary>
@@ -268,7 +280,8 @@ ${pretty({ variables: s.vars, effects: s.effect, client: c.source.spells[i] })}<
             key === 'attackspeed'
               ? base * (1 + (growth * (0.7025 * n + 0.0175 * n * n)) / 100)
               : base + growth * (0.7025 * n + 0.0175 * n * n);
-          values[key] = Number(result.toFixed(3));
+          values[championStatLabel(key, c.partype)] =
+            key === 'crit' ? `${Number((result * 100).toFixed(2))}%` : Number(result.toFixed(3));
         }
         required(document.querySelector('#champ-stats')).innerHTML = stats(values);
       };
@@ -277,11 +290,19 @@ ${pretty({ variables: s.vars, effects: s.effect, client: c.source.spells[i] })}<
     } else if (kind === 'items') {
       const i = value as Item;
       target.innerHTML = /* HTML */ `<h2 class="entry-heading">
-          <img src="${icon(i, 'item')}" alt="" />${escape(i.name)}
+          <img src="${icon(i, 'item')}" alt="" />${text(i.name)}
         </h2>
         <p>${text(i.description)}</p>
-        ${stats({ 'Total gold': i.gold.total, 'Combine gold': i.gold.base, 'Sell gold': i.gold.sell, ...i.stats })}
-        <p>Categories: ${escape(i.tags.join(', '))}</p>
+        ${stats({ 'Total price': i.gold.total, ...(i.from?.length ? { 'Finishing cost': i.gold.base } : {}), 'Sell value': i.gold.sell })}
+        ${i.from?.length ? '<p class="muted">Finishing cost is the extra gold paid once you own all recipe components. It is included in the total price.</p>' : ''}
+        <div class="category-tags" aria-label="Item categories">
+          ${itemCategories(i.tags)
+            .map(
+              (category) =>
+                `<button class="badge category-tag" data-category="${escape(category)}">${escape(category)}</button>`,
+            )
+            .join('')}
+        </div>
         <h3>Recipe</h3>
         <div class="row">
           ${
@@ -291,11 +312,12 @@ ${pretty({ variables: s.vars, effects: s.effect, client: c.source.spells[i] })}<
           }
         </div>
         <h3>Builds into</h3>
-        <div class="row">
+        <div class="row" id="item-upgrades">
           ${
             itemAlternatives((i.into ?? []).map(Number))
+              .filter((item) => !itemMap || item.maps[itemMap])
               .map((item) => itemButton(item.id))
-              .join('') || 'No further upgrades'
+              .join('') || 'No upgrades in the selected game mode'
           }
         </div>
         <details>
@@ -320,34 +342,112 @@ ${pretty({ variables: s.vars, effects: s.effect, client: c.source.spells[i] })}<
     notify('Unable to open this entry.');
   }
 }
+function runeTree(selected: number[] = [], styles = initial.runes) {
+  const chosen = new Set(selected);
+
+  return `<div class="rune-trees ${selected.length ? 'rune-page' : ''}">${styles
+    .map(
+      (style) =>
+        `<section class="panel rune-tree"><h3>${escape(style.name)}</h3>${style.slots
+          .map(
+            (slot, index) =>
+              `<div class="rune-slot ${index === 0 ? 'keystones' : ''}">${slot.runes
+                .map(
+                  (perk) =>
+                    `<div class="rune-choice ${chosen.has(perk.id) ? 'selected' : selected.length ? 'unselected' : ''}">${perkButton(perk.id)}<small>${escape(perk.name)}</small></div>`,
+                )
+                .join('')}</div>`,
+          )
+          .join('')}</section>`,
+    )
+    .join('')}</div>`;
+}
+function renderRunes() {
+  content.innerHTML = `${runeTree()}<section class="panel"><h3>Stat shards</h3>${initial.shardSlots.map((slot) => `<div class="rune-slot">${slot.map((id) => `<div class="rune-choice">${perkButton(id)}<small>${escape(perkFor(id)?.name)}</small></div>`).join('')}</div>`).join('')}</section>`;
+}
 function renderList(kind: 'champions' | 'items' | 'runes' | 'summoners') {
-  const perks = Array.from(
-    new Map(
-      [
-        ...initial.runes.flatMap((style) => style.slots.flatMap((slot) => slot.runes)),
-        ...initial.shards,
-      ].map((perk) => [perk.id, perk]),
-    ).values(),
-  );
-  const list = byName<{ id: number; name: string; subtitle: string; url: string; tags: string[] }>(
-    kind === 'champions'
-      ? initial.champions.map((champ) => ({
-          ...champ,
-          subtitle: champ.title,
-          url: icon(champ, 'champion'),
-        }))
-      : kind === 'items'
-        ? initial.items.map((item) => ({
-            ...item,
-            subtitle: `${item.gold.total} gold · ${item.maps['11'] ? 'Rift' : 'Other modes'}`,
-            url: icon(item, 'item'),
+  if (kind === 'runes') {
+    renderRunes();
+
+    return;
+  }
+  content.innerHTML = `<input type="search" id="search" placeholder="Search ${escape(kind)}..." aria-label="Search ${escape(kind)}" />
+    ${
+      kind === 'items'
+        ? `<div class="item-filters row">
+      <label>Game mode<select id="item-map"><option value="11">Summoner&#39;s Rift</option><option value="12">ARAM</option><option value="30">Arena</option><option value="">All modes</option></select></label>
+      <label>Item tier<select id="item-tier"><option value="">All tiers</option><option value="1">Starter</option><option value="0">Basic</option><option value="4">Epic</option><option value="5">Legendary</option><option value="boots">Boots</option></select></label>
+      <label>Stat / purpose<select id="item-tag"><option value="">All stats</option>${[
+        ...itemCategories(initial.items.flatMap((item) => item.tags)),
+      ]
+        .sort()
+        .map((tag) => `<option value="${escape(tag)}">${escape(tag)}</option>`)
+        .join('')}</select></label>
+      <label><input type="checkbox" id="item-variants" />Show hidden variants</label>
+      <label><input type="checkbox" id="item-unavailable" />Show unavailable items</label>
+      <label>Max gold<input type="number" id="item-gold" min="0" placeholder="Any" /></label>
+    </div>`
+        : ''
+    }
+    <p id="result-count" class="muted" aria-live="polite"></p><div class="grid" id="results"></div>`;
+  const update = () => {
+    const q = required(document.querySelector<HTMLInputElement>('#search')).value.toLowerCase();
+    const field = (id: string) => required(document.querySelector<HTMLInputElement>(`#item-${id}`));
+    if (kind === 'items') {
+      itemMap = field('map').value;
+      itemCategory = field('tag').value;
+    }
+    const canonical = new Set<string>();
+    const items =
+      kind === 'items'
+        ? [...initial.items]
+            .sort((a, b) => a.id - b.id)
+            .filter(
+              (item) =>
+                (!field('map').value || item.maps[field('map').value]) &&
+                (field('variants').checked || !item.variant) &&
+                (field('unavailable').checked || item.available),
+            )
+            .filter((item) => {
+              if (field('variants').checked) {
+                return true;
+              }
+              const key = item.name.replace(/<[^>]+>/g, '').toLowerCase();
+              if (canonical.has(key)) {
+                return false;
+              }
+              canonical.add(key);
+
+              return true;
+            })
+            .filter(
+              (item) =>
+                (!field('tier').value ||
+                  (field('tier').value === 'boots'
+                    ? item.tags.includes('Boots')
+                    : item.tier === Number(field('tier').value))) &&
+                (!field('tag').value || itemCategories(item.tags).includes(field('tag').value)) &&
+                (!field('gold').value || item.gold.total <= Number(field('gold').value)),
+            )
+        : [];
+    const list = byName<{
+      id: number;
+      name: string;
+      subtitle: string;
+      url: string;
+      tags: string[];
+    }>(
+      kind === 'champions'
+        ? initial.champions.map((champ) => ({
+            ...champ,
+            subtitle: champ.title,
+            url: icon(champ, 'champion'),
           }))
-        : kind === 'runes'
-          ? perks.map((perk) => ({
-              ...perk,
-              tags: [],
-              subtitle: perk.shortDesc.replace(/<[^>]*>/g, ' '),
-              url: runeIcon(perk),
+        : kind === 'items'
+          ? items.map((item) => ({
+              ...item,
+              subtitle: `${item.gold.total} gold${item.champion ? ` / ${item.champion} only` : ''}`,
+              url: icon(item, 'item'),
             }))
           : initial.summoners.map((spell) => ({
               ...spell,
@@ -355,29 +455,25 @@ function renderList(kind: 'champions' | 'items' | 'runes' | 'summoners') {
               subtitle: spell.description,
               url: icon(spell, 'spell'),
             })),
-  );
-  content.innerHTML = /* HTML */ `<input
-      type="search"
-      id="search"
-      placeholder="Search ${escape(kind)}…"
-      aria-label="Search ${escape(kind)}"
-    />
-    <div class="grid" id="results"></div>`;
-  const update = () => {
-    const q = required(document.querySelector<HTMLInputElement>('#search')).value.toLowerCase();
+    ).filter((entry) =>
+      `${entry.name} ${itemCategories(entry.tags).join(' ')}`.toLowerCase().includes(q),
+    );
+    required(document.querySelector('#result-count')).textContent = `${list.length} results`;
     required(document.querySelector('#results')).innerHTML = list
-      .filter((x) => `${x.name} ${(x.tags ?? []).join(' ')}`.toLowerCase().includes(q))
       .map(
-        (x) =>
-          /* HTML */ `<button class="card" data-kind="${kind}" data-id="${x.id}">
-            <img loading="lazy" src="${x.url}" alt="" /><span
-              ><strong>${escape(x.name)}</strong><small>${escape(x.subtitle)}</small></span
-            >
-          </button>`,
+        (entry) =>
+          `<button class="card" data-kind="${kind}" data-id="${entry.id}"><img loading="lazy" src="${entry.url}" alt="" /><span><strong>${text(entry.name)}</strong><small>${text(entry.subtitle)}</small></span></button>`,
       )
       .join('');
   };
-  required(document.querySelector('#search')).addEventListener('input', update);
+  if (kind === 'items') {
+    required(document.querySelector<HTMLSelectElement>('#item-map')).value = itemMap;
+    required(document.querySelector<HTMLSelectElement>('#item-tag')).value = itemCategory;
+    itemFilters = update;
+  }
+  content
+    .querySelectorAll('input, select')
+    .forEach((input) => input.addEventListener('input', update));
   update();
 }
 function companion() {
@@ -441,6 +537,10 @@ function companion() {
     button.disabled = true;
     try {
       initial.state = await api.importSelected();
+      if (initial.state.selectedId && selectedId !== initial.state.selectedId) {
+        selectedId = initial.state.selectedId;
+        companion();
+      }
       updateStatus();
     } catch (e) {
       notify(e instanceof Error ? e.message : 'Import failed');
@@ -462,6 +562,7 @@ async function showPlan() {
 
     return;
   }
+  target.innerHTML = '<div class="empty">Generating champion plan...</div>';
   try {
     const [plan, championEntry] = await Promise.all([
       api.plan(selectedId),
@@ -504,7 +605,11 @@ async function showPlan() {
               .map(
                 (item, index) =>
                   /* HTML */ `<div class="build-item" data-step="${index + 1}">
-                    ${itemButton(item.id, String(index + 1))}<small>${item.gold.total}g</small>
+                    ${itemButton(item.id, String(index + 1))}
+                    <div>
+                      <strong>${text(item.name)}</strong><small>${item.gold.total}g</small>
+                      <p class="build-reason">${item.reasons.map(escape).join(' / ')}</p>
+                    </div>
                   </div>`,
               )
               .join('')}
@@ -512,8 +617,14 @@ async function showPlan() {
         </section>
         <section class="panel">
           <h3>Rune page</h3>
-          <div class="icon-row rune-page">
-            ${plan.runes.selectedPerkIds.map(perkButton).join('')}
+          ${runeTree(
+            plan.runes.selectedPerkIds,
+            [plan.runes.primaryStyleId, plan.runes.subStyleId].flatMap((id) =>
+              initial.runes.filter((style) => style.id === id),
+            ),
+          )}
+          <div class="rune-slot">
+            ${plan.runes.selectedPerkIds.slice(6).map(perkButton).join('')}
           </div>
           <h3>Summoner spells</h3>
           <div class="icon-row">
@@ -548,6 +659,10 @@ async function showPlan() {
         </p>
       </section>`;
   } catch {
+    if (generation !== planGeneration || !target.isConnected) {
+      return;
+    }
+    target.innerHTML = '<div class="empty">Unable to generate this champion plan.</div>';
     notify('This champion’s plan could not be generated.');
   }
 }
@@ -700,6 +815,7 @@ function renderSettings() {
 }
 function render() {
   hideTooltip();
+  itemFilters = undefined;
   message.hidden = true;
   planGeneration++;
   required(document.querySelector('#title')).textContent =
@@ -729,6 +845,10 @@ required(document.querySelector('nav')).addEventListener('click', (event) => {
   if (!button) {
     return;
   }
+  if (button.dataset.view === 'items' && currentView !== 'items') {
+    itemMap = '11';
+    itemCategory = '';
+  }
   currentView = required(button.dataset.view);
   document
     .querySelectorAll('nav button')
@@ -737,6 +857,25 @@ required(document.querySelector('nav')).addEventListener('click', (event) => {
 });
 document.body.addEventListener('click', (event) => {
   hideTooltip();
+  const category = (event.target as Element).closest<HTMLElement>('[data-category]');
+  if (category) {
+    const selectedCategory = required(category.dataset.category);
+    modal.close();
+    if (currentView !== 'items') {
+      currentView = 'items';
+      render();
+      document
+        .querySelectorAll<HTMLElement>('nav button')
+        .forEach((button) => button.classList.toggle('active', button.dataset.view === 'items'));
+    }
+    required(document.querySelector<HTMLInputElement>('#search')).value = '';
+    required(document.querySelector<HTMLSelectElement>('#item-tier')).value = '';
+    required(document.querySelector<HTMLInputElement>('#item-gold')).value = '';
+    required(document.querySelector<HTMLSelectElement>('#item-tag')).value = selectedCategory;
+    itemFilters?.();
+
+    return;
+  }
   const button = (event.target as Element).closest<HTMLElement>('[data-kind]');
   if (button) {
     void detail(required(button.dataset.kind), Number(button.dataset.id));
@@ -790,15 +929,44 @@ document.body.addEventListener(
   },
   true,
 );
+// A backdrop click targets the dialog, but padding clicks also do: test its bounds.
+let backdropPointer = false;
+const outsideModal = (event: MouseEvent) => {
+  const bounds = modal.getBoundingClientRect();
+
+  return (
+    event.clientX < bounds.left ||
+    event.clientX > bounds.right ||
+    event.clientY < bounds.top ||
+    event.clientY > bounds.bottom
+  );
+};
+modal.addEventListener('pointerdown', (event) => {
+  backdropPointer = outsideModal(event);
+});
+modal.addEventListener('click', (event) => {
+  if (backdropPointer && outsideModal(event)) {
+    modal.close();
+  }
+  backdropPointer = false;
+});
+modal.addEventListener('close', hideTooltip);
 required(document.querySelector('#close-detail')).addEventListener('click', () => modal.close());
 try {
   initial = await api.init();
+  selectedId = initial.state.selectedId ?? undefined;
   required(document.querySelector('#patch')).textContent = `PATCH ${initial.manifest.version}`;
   api.onState((state) => {
+    const championChanged = state.selectedId !== initial.state.selectedId;
     const draftChanged = state.draftKey !== initial.state.draftKey;
     initial.state = state;
     updateStatus();
-    if (draftChanged && currentView === 'companion') {
+    if (championChanged && state.selectedId) {
+      selectedId = state.selectedId;
+      if (currentView === 'companion') {
+        companion();
+      }
+    } else if (draftChanged && currentView === 'companion') {
       void showPlan();
     }
   });

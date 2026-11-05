@@ -6,12 +6,12 @@
 
 1. Merge changes into `main` using Conventional Commit messages, such as `fix: correct shop guidance` or `feat: add item tooltips`. Release Please creates or updates a release PR with the next version, `package.json`, `package-lock.json`, `CHANGELOG.md`, and its version manifest.
 2. Review and merge that release PR. Release Please creates its `vX.Y.Z` tag and release draft. The configuration explicitly creates tags for drafts so the next release can find the previous version.
-3. The same workflow checks out that exact tag, verifies the version files, runs all checks and desktop smoke tests, builds the Windows x64 portable executable, and smoke-tests the executable itself. It generates `SHA256SUMS.txt`, checks it again after downloading the build artifacts, and attaches both files to the existing release draft.
-4. Review the completed draft and publish it when ready. The README's latest-release link points to the latest published stable release.
+3. The same workflow checks out that exact tag, verifies the version files, runs all checks and desktop smoke tests, builds the Windows x64 portable executable, and smoke-tests the executable itself. It generates `SHA256SUMS.txt`, checks it again after downloading the build artifacts, attaches both files to the existing release draft, then publishes it automatically.
+4. The verified release is published automatically after the asset upload succeeds. The README's latest-release link points to the latest published stable release.
 
 Release Please owns version changes and release creation; there is no manual `npm version`, tagging, or separate tag-triggered release workflow. The manifest starts from the current package version, `0.1.0`; the first proposed release is determined from the merged commits. Before 1.0, breaking changes bump the minor version. Automated game-data PRs use `fix(data):` so merging new game data can trigger a release too.
 
-Drafts preserve the opportunity to review the [distribution requirements](development.md#license-and-distribution) and real-client acceptance checks before publication. Automated checks do not establish real-match performance, HUD alignment, or Riot approval. The asset-upload job refuses to replace files on a published release.
+Releases stay drafts while their build and asset verification runs; a failed build leaves the draft available for recovery. Review the [distribution requirements](development.md#license-and-distribution) and real-client acceptance checks before merging the release PR. Automated checks do not establish real-match performance, HUD alignment, or Riot approval. The asset-upload job refuses to replace files on a published release.
 
 ## GitHub setup and CI
 
@@ -45,6 +45,6 @@ The executable is portable: download and run it without Node.js or an installer.
 
 A failed executable build leaves the release draft without completed assets. Use **Re-run failed jobs** on the original workflow run to retain its Release Please outputs.
 
-Alternatively, select **Actions > Release Please and Windows executable > Run workflow** on `main` and enter the existing draft tag in `release_tag`. This rebuilds that tag and uploads the verified files to its existing draft, without creating a new version or release. Leave `release_tag` empty to run Release Please normally. Rerunning all jobs after a draft was already created may otherwise produce no new release output and skip the executable jobs.
+Alternatively, select **Actions > Release Please and Windows executable > Run workflow** on `main` and enter the existing draft tag in `release_tag`. This rebuilds that tag uploads the verified files to its existing draft, and publishes it after verification, without creating a new version or release. Leave `release_tag` empty to run Release Please normally. Rerunning all jobs after a draft was already created may otherwise produce no new release output and skip the executable jobs.
 
 Fix published code through a new Conventional Commit and release PR rather than moving a tag or replacing published assets.

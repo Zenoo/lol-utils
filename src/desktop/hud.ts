@@ -103,11 +103,13 @@ export function skillBounds(view: Viewport, key: string, hudScale: number): View
     throw new Error('Unknown skill key');
   }
   const scale = (view.height / 1080) * (0.5 + Math.max(0, Math.min(1, hudScale)) * 0.5);
-  const size = Math.max(24, Math.round(52 * scale));
+  // The ability icons sit below the health/resource bars. Anchor their centres to
+  // the bottom edge; scaling the distance from the top shifts them off the HUD.
+  const size = Math.max(1, Math.round(44 * scale));
 
   return {
-    x: Math.round(view.x + view.width / 2 + (-110 + index * 58) * scale - size / 2),
-    y: Math.round(view.y + view.height - 91 * scale - size / 2),
+    x: Math.round(view.x + view.width / 2 + (-92 + index * 48) * scale - size / 2),
+    y: Math.round(view.y + view.height - 42 * scale - size / 2),
     width: size,
     height: size,
   };

@@ -42,6 +42,7 @@ export interface BuyOption {
   cost: number;
   affordable: boolean;
   reasons: string[];
+  icon?: string;
 }
 export interface OverlayState {
   champion: string;
@@ -62,7 +63,7 @@ export interface ServiceState {
 export interface Plan {
   questRewards: Item[];
   starters: Item[];
-  build: Item[];
+  build: (Item & { reasons: string[] })[];
   ranked: {
     item: Pick<Item, 'id' | 'name'>;
     reasons: string[];
@@ -85,9 +86,15 @@ export interface AppData {
   state: ServiceState;
   hotkeyAvailable: boolean;
   champions: Pick<Champion, 'id' | 'name' | 'title' | 'tags' | 'image'>[];
-  items: Pick<Item, 'id' | 'name' | 'gold' | 'tags' | 'image' | 'maps'>[];
+  items: (Pick<Item, 'id' | 'name' | 'gold' | 'tags' | 'image' | 'maps'> & {
+    tier?: number;
+    available: boolean;
+    variant: boolean;
+    champion: string;
+  })[];
   runes: { id: number; name: string; slots: { runes: Perk[] }[] }[];
   shards: Perk[];
+  shardSlots: number[][];
   summoners: SummonerSpell[];
 }
 export interface CompanionBridge {

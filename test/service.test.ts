@@ -315,7 +315,9 @@ test('only the final pick refreshes the item set using both complete teams, with
     const saved = itemWrites()[1].body as {
       itemSets: { blocks: { type: string; items: { id: string }[] }[] }[];
     };
-    const ids = saved.itemSets[0].blocks.slice(1).map((b) => Number(b.items[0].id));
+    const ids = saved.itemSets[0].blocks
+      .filter((block) => !block.type.startsWith('Starter alternative:'))
+      .map((b) => Number(b.items[0].id));
     const shen = required(catalog.champions.find((c) => c.alias === 'Shen'));
     assert.deepEqual(ids, service.engine.build(shen, 11, 'TOP', draftGame(catalog, full)));
     assert.deepEqual(ids.slice(0, 2), [3075, 3047]);
@@ -323,6 +325,39 @@ test('only the final pick refreshes the item set using both complete teams, with
     const finalReads = reads;
     await until(() => reads > finalReads);
     assert.equal(itemWrites().length, 2, 'unchanged complete roster is not imported again');
+  } finally {
+    service.stop();
+  }
+});
+
+test('a closed League client still warns about outdated bundled data using the public patch check', async () => {
+  let requests = 0;
+  const service = new CompanionService(
+    catalog,
+    () => defaults,
+    () => {},
+    () => {},
+    {
+      live: {
+        request: async () => {
+          throw new Error('No game');
+        },
+        close: () => {},
+      },
+      connect: async () => undefined,
+      versions: async () => {
+        requests++;
+
+        return ['99.1.2'];
+      },
+    },
+  );
+  try {
+    service.start();
+    await until(() => Boolean(service.state().patchWarning?.includes('99.1.2')));
+    assert.match(service.state().patchWarning ?? '', /outdated/);
+    assert.equal(service.state().live, null);
+    assert.equal(requests, 1);
   } finally {
     service.stop();
   }

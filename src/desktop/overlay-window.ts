@@ -1,14 +1,14 @@
 import { BrowserWindow } from 'electron';
 import path from 'node:path';
 
-/** This renderer owns only text. It cannot focus, intercept clicks, or call the game APIs. */
+/** This renderer displays prepared text and cached item icons. It cannot focus, intercept clicks, or call the game APIs. */
 export function createOverlayWindow(
   directory: string,
   kind: 'shop' | 'skill' = 'shop',
 ): BrowserWindow {
   const window = new BrowserWindow({
-    width: kind === 'skill' ? 52 : 330,
-    height: kind === 'skill' ? 52 : 260,
+    width: kind === 'skill' ? 44 : 390,
+    height: kind === 'skill' ? 44 : 480,
     show: false,
     transparent: true,
     frame: false,
@@ -22,7 +22,8 @@ export function createOverlayWindow(
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
-      backgroundThrottling: true,
+      backgroundThrottling: !process.argv.includes('--smoke-test'),
+      offscreen: process.argv.includes('--smoke-test'),
       spellcheck: false,
     },
   });

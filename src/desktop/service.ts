@@ -22,13 +22,14 @@ import { importItems, importRunes, importSummoners } from '../integrations/impor
 import { questKind } from '../core/role-items.js';
 import { completedDraftKey, draftGame } from '../core/draft.js';
 
-export const samePatch = (a: string, b: string) =>
-  /^\d+\.\d+\./.test(a) &&
-  a.split('.').slice(0, 2).join('.') === b.split('.').slice(0, 2).join('.');
+import { samePatch, patchWarning, publishedVersions } from '../core/versions.js';
+export { samePatch } from '../core/versions.js';
+
 type ApiClient = Pick<LocalApi, 'request' | 'close'>;
 interface Transports {
   live: ApiClient;
   connect: () => Promise<ApiClient | undefined>;
+  versions?: () => Promise<string[]>;
 }
 export class CompanionService {
   readonly engine: Engine;
@@ -43,6 +44,11 @@ export class CompanionService {
   private draftKey = '';
   private clientVersion = '';
   private lastVersionCheck = 0;
+  private versions: string[] = [];
+  private nextPublishedCheck = 0;
+  private checkingPublished = false;
+  private publishedCheckFailed = false;
+  private hasGame = false;
   private currentSession?: Session;
   private summoner?: SummonerAccount;
   private importing = false;
@@ -167,7 +173,41 @@ export class CompanionService {
       this.clientVersion = '';
     }
   }
+  private publishVersionWarning() {
+    this.publish({
+      patchWarning: patchWarning(
+        this.catalog.version,
+        this.latest.clientVersion ?? '',
+        this.versions,
+        this.hasGame || Boolean(this.client),
+        this.publishedCheckFailed,
+      ),
+    });
+  }
+  private async checkPublishedVersion() {
+    if (this.checkingPublished || Date.now() < this.nextPublishedCheck) {
+      return;
+    }
+    this.checkingPublished = true;
+    this.nextPublishedCheck = Date.now() + 6 * 60 * 60 * 1000;
+    try {
+      // Tests inject their transport; no external network traffic during local-API tests.
+      const load = this.transports ? this.transports.versions : publishedVersions;
+      if (!load) {
+        return;
+      }
+      this.versions = await load();
+      this.publishedCheckFailed = false;
+    } catch {
+      this.publishedCheckFailed = true;
+      this.nextPublishedCheck = Date.now() + 60_000;
+    } finally {
+      this.checkingPublished = false;
+      this.publishVersionWarning();
+    }
+  }
   private async tick() {
+    void this.checkPublishedVersion();
     let game: LiveGame | undefined;
     try {
       const value = liveGameSchema.parse(
@@ -187,17 +227,9 @@ export class CompanionService {
     await this.checkVersion();
     const gameVersion = game?.gameData.gameVersion || this.clientVersion;
     const compatible = samePatch(gameVersion, this.catalog.version);
-    this.publish({
-      clientVersion: gameVersion,
-      patchCompatible: compatible,
-      patchWarning: compatible
-        ? ''
-        : gameVersion
-          ? `Game patch ${gameVersion} differs from data patch ${this.catalog.version}. Guidance continues using the bundled data; recent changes may affect recommendations.`
-          : game || this.client
-            ? `Game patch could not be verified. Guidance continues using data patch ${this.catalog.version}.`
-            : '',
-    });
+    this.hasGame = Boolean(game);
+    this.publish({ clientVersion: gameVersion, patchCompatible: compatible });
+    this.publishVersionWarning();
     if (game) {
       this.disconnected = 0;
       this.currentSession = undefined;

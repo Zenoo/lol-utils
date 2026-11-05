@@ -81,11 +81,15 @@ test('support rewards account for proc conditions and ordinary gold-generating c
   assert.equal(questKind(required(engine.items.get(4646))), undefined);
   assert.equal(eligible(required(engine.items.get(4646)), champion), true);
 });
-test('live shop suggests the quest starter or zero-gold reward at the correct stage without duplicate quest items', () => {
+test('live shop keeps completed targets and offers the zero-gold reward at the correct stage without duplicate quest items', () => {
   const live = game();
   live.allPlayers[0] = player('Annie', 'ORDER', { position: 'UTILITY' });
   live.activePlayer.currentGold = 500;
-  assert.ok(engine.nextBuys(champion, live).some((result) => result.item.id === 3865));
+  assert.ok(
+    engine
+      .nextBuys(champion, live)
+      .every((result) => result.item.rules?.tier === 5 || result.item.tags.includes('Boots')),
+  );
   live.allPlayers[0].items = [{ itemID: 3867, count: 1, slot: 0 }];
   live.activePlayer.currentGold = 0;
   const rewards = engine.nextBuys(champion, live);
@@ -112,7 +116,7 @@ test('consumed jungle pets are not suggested again after their quest has progres
   const live = game();
   live.allPlayers[0].position = 'JUNGLE';
   live.activePlayer.currentGold = 500;
-  assert.ok(engine.nextBuys(champion, live).some((result) => questKind(result.item) === 'jungle'));
+  assert.ok(engine.nextBuys(champion, live).every((result) => questKind(result.item) !== 'jungle'));
   assert.ok(
     engine
       .nextBuys(champion, live, { roleQuestPurchased: true })

@@ -153,7 +153,22 @@ test('item import merges the set against a fresh GET before PUT', async () => {
   await importItems(api, engine, champ, 1, 11);
   const parsed = itemSetsSchema.parse(saved);
   assert.equal(parsed.itemSets[0].uid, 'personal');
-  assert.equal(z.array(z.unknown()).parse(parsed.itemSets[1].blocks).length, 7);
+  const starters = engine.starters(champ);
+  assert.equal(z.array(z.unknown()).parse(parsed.itemSets[1].blocks).length, starters.length + 6);
+  const blocks = z
+    .array(z.object({ type: z.string(), items: z.array(z.object({ id: z.string() })) }))
+    .parse(parsed.itemSets[1].blocks);
+  starters.forEach((entry, index) => {
+    assert.ok(blocks[index].type.includes(entry.item.name));
+    assert.ok(blocks[index].type.includes(required(entry.reasons.at(-1))));
+  });
+  const plan = engine.buildPlan(champ, 11);
+  for (const [index, entry] of plan.entries()) {
+    assert.ok(blocks[index + starters.length].type.includes(entry.item.name));
+    assert.ok(blocks[index + starters.length].type.includes(required(entry.reasons.at(-1))));
+    assert.equal(blocks[index + starters.length].items[0].id, String(entry.item.id));
+  }
+
   await assert.rejects(importItems(api, engine, champ, 1, 12), /Rift/);
 });
 test('settings whitelist values and never persist arbitrary renderer properties', () => {
