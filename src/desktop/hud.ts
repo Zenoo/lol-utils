@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { findLockfile } from '../integrations/local-api.js';
+import type { HudLayout } from '../core/types.js';
 
 export function hudScaleFromConfig(text: string): number | undefined {
   let section = '';
@@ -97,19 +98,43 @@ export interface Viewport {
 }
 
 /** Bottom-centred skill row, in physical viewport pixels before converting to display DIPs. */
-export function skillBounds(view: Viewport, key: string, hudScale: number): Viewport {
-  const index = 'QWER'.indexOf(key);
-  if (index < 0) {
+export function skillBounds(
+  view: Viewport,
+  key: string,
+  hudScale: number,
+  layout: HudLayout,
+  calibration: { skillOffsetX?: number; skillOffsetY?: number; skillSize?: number } = {},
+): Viewport {
+  const slot = layout.slots.find((entry) => entry.key === key);
+  if (!slot) {
     throw new Error('Unknown skill key');
   }
-  const scale = (view.height / 1080) * (0.5 + Math.max(0, Math.min(1, hudScale)) * 0.5);
-  // The ability icons sit below the health/resource bars. Anchor their centres to
-  // the bottom edge; scaling the distance from the top shifts them off the HUD.
-  const size = Math.max(1, Math.round(44 * scale));
+  const hudFactor = 0.5 + Math.max(0, Math.min(1, hudScale)) * 0.5;
+  const scale = (view.height / layout.referenceHeight) * hudFactor;
+  // Riot's bottom-centred HUD uses its own source resolution. The ability row is
+  // asymmetric: Q is far left of the anchor; R is near it. Scale offsets around
+  // that anchor, rather than centring QWER as a group or scaling absolute X.
+  const viewportScale = view.height / 1080;
+  const size = Math.max(
+    1,
+    Math.round(64 * viewportScale * hudFactor * (calibration.skillSize ?? 1)),
+  );
 
   return {
-    x: Math.round(view.x + view.width / 2 + (-92 + index * 48) * scale - size / 2),
-    y: Math.round(view.y + view.height - 42 * scale - size / 2),
+    x: Math.round(
+      view.x +
+        view.width * layout.anchor[0] +
+        (slot.position[0] + slot.size[0] / 2 - layout.referenceWidth * layout.anchor[0]) * scale +
+        (calibration.skillOffsetX ?? 0) * viewportScale -
+        size / 2,
+    ),
+    y: Math.round(
+      view.y +
+        view.height * layout.anchor[1] +
+        (slot.position[1] + slot.size[1] / 2 - layout.referenceHeight * layout.anchor[1]) * scale +
+        (calibration.skillOffsetY ?? 0) * viewportScale -
+        size / 2,
+    ),
     width: size,
     height: size,
   };

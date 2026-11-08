@@ -2,8 +2,8 @@
   "version": "16.22.1",
   "patch": "16.22",
   "locale": "en_US",
-  "fetchedAt": "2026-11-04T19:53:17.067Z",
-  "catalogSha256": "37fc89deff999e278ab3a8b6409ced990fcccf32e3f2a276b3993388d4e90319",
+  "fetchedAt": "2026-11-07T21:58:34.978Z",
+  "catalogSha256": "4a39f6aaecc42e630546a2df9c2e24b5a84feb3f506b141a39ecd7a15e095840",
   "sources": [
     {
       "url": "https://ddragon.leagueoflegends.com/cdn/16.22.1/data/en_US/champion.json",
@@ -2614,6 +2614,11 @@
       "url": "https://raw.communitydragon.org/16.22/game/items.cdtb.bin.json",
       "file": "raw/game-items.json",
       "sha256": "a36808f7af9bf875309c7d881bf15e1d7b7571f95b55f5b16d55a129fc8bf6ea"
+    },
+    {
+      "url": "https://raw.communitydragon.org/16.22/game/clientstates/gameplay/ux/lol/playerframe/uibase.cdtb.bin.json",
+      "file": "raw/hud-player-frame.json",
+      "sha256": "45a74a81c3da7ba42cbd5b8b3e4586308445fa3691dbcef9b39cacb47c118c86"
     },
     {
       "url": "https://ddragon.leagueoflegends.com/cdn/16.22.1/data/en_US/item.json",

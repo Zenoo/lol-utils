@@ -8,6 +8,7 @@ import type {
   Settings,
   ServiceState,
   CompanionBridge,
+  SourceBuilds,
 } from '../core/types.js';
 
 // IPC is a private, main-process-owned protocol; no arbitrary channel is exposed.
@@ -17,9 +18,11 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
   return result as T;
 }
 const bridge: CompanionBridge = {
+  sourceBuilds: (id, role, refresh) => invoke<SourceBuilds>('source-builds', id, role, refresh),
+  importSourceBuild: (id, parts) => invoke<ServiceState>('import-source-build', id, parts),
   init: () => invoke<AppData>('init'),
   detail: (kind, id) => invoke<Champion | Item | Perk | undefined>('detail', kind, id),
-  plan: (id) => invoke<Plan>('plan', id),
+  plan: (id, role) => invoke<Plan>('plan', id, role),
   saveSettings: (value) => invoke<Settings>('settings', value),
   importSelected: () => invoke<ServiceState>('import'),
   pickLeague: () => invoke<string | undefined>('pick-league'),

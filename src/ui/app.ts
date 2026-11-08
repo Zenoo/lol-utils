@@ -1,4 +1,7 @@
 import { required } from '../core/assert.js';
+import { publicPatch } from '../core/versions.js';
+import { buildSources, groupBuilds } from '../core/builds.js';
+import { buildRow, rolePicker, sourceIcon } from './build-list.js';
 import { autocomplete, byName } from './autocomplete.js';
 import { championStatLabel } from './champion-stats.js';
 import { itemCategories } from './item-categories.js';
@@ -12,6 +15,9 @@ import type {
   CompanionBridge,
   OverlayBridge,
   SummonerSpell,
+  ImportPart,
+  SourceBuild,
+  Plan,
 } from '../core/types.js';
 
 declare global {
@@ -28,6 +34,10 @@ let initial: AppData;
 let currentView = 'companion';
 let selectedId: number | undefined;
 let planGeneration = 0;
+let sourceGeneration = 0;
+let browsingRole: string | undefined;
+let buildSelection: { context: string; id: string; manual: boolean } | undefined;
+const chosenParts = new Set<ImportPart>(['items', 'runes', 'summoners']);
 let itemMap = '11';
 let itemCategory = '';
 let itemFilters: (() => void) | undefined;
@@ -151,6 +161,19 @@ function hideTooltip() {
   hoverTarget?.removeAttribute('aria-describedby');
   hoverTarget = null;
 }
+function displayTooltip(target: HTMLElement, name: string, description: string, meta = '') {
+  const img = target.querySelector<HTMLImageElement>('img');
+  hover.innerHTML = `<div class="tooltip-heading">${img ? `<img src="${escape(img.src)}" alt="" />` : ''}<strong>${text(name)}</strong></div><p class="tooltip-meta">${escape(meta)}</p><div class="tooltip-description">${text(description)}</div>`;
+  (modal.open ? modal : document.body).append(hover);
+  hover.hidden = false;
+  target.setAttribute('aria-describedby', hover.id);
+  const rect = target.getBoundingClientRect();
+  const size = hover.getBoundingClientRect();
+  const x = Math.max(12, Math.min(innerWidth - size.width - 12, rect.right + 12));
+  const y = Math.max(12, Math.min(innerHeight - size.height - 12, rect.top));
+  hover.style.left = `${x}px`;
+  hover.style.top = `${y}px`;
+}
 async function showTooltip(target: HTMLElement) {
   if (hoverTarget === target) {
     return;
@@ -158,6 +181,11 @@ async function showTooltip(target: HTMLElement) {
   hideTooltip();
   hoverTarget = target;
   const generation = hoverGeneration;
+  if (target.dataset.tooltipTitle) {
+    displayTooltip(target, target.dataset.tooltipTitle, target.dataset.tooltipDescription ?? '');
+
+    return;
+  }
   try {
     const value = await cachedDetail(required(target.dataset.kind), Number(target.dataset.id));
     if (!value || generation !== hoverGeneration || !target.isConnected) {
@@ -193,17 +221,7 @@ async function showTooltip(target: HTMLElement) {
       }
     }
     description = description.replace(/\{\{\s*(.*?)\s*\}\}/g, '[$1]');
-    const img = target.querySelector<HTMLImageElement>('img');
-    hover.innerHTML = `<div class="tooltip-heading">${img ? `<img src="${escape(img.src)}" alt="" />` : ''}<strong>${text(name)}</strong></div><p class="tooltip-meta">${escape(meta)}</p><div class="tooltip-description">${text(description)}</div>`;
-    (modal.open ? modal : document.body).append(hover);
-    hover.hidden = false;
-    target.setAttribute('aria-describedby', hover.id);
-    const rect = target.getBoundingClientRect();
-    const size = hover.getBoundingClientRect();
-    const x = Math.max(12, Math.min(innerWidth - size.width - 12, rect.right + 12));
-    const y = Math.max(12, Math.min(innerHeight - size.height - 12, rect.top));
-    hover.style.left = `${x}px`;
-    hover.style.top = `${y}px`;
+    displayTooltip(target, name, description, meta);
   } catch {
     if (generation === hoverGeneration) {
       hideTooltip();
@@ -477,24 +495,25 @@ function renderList(kind: 'champions' | 'items' | 'runes' | 'summoners') {
   update();
 }
 function companion() {
-  content.innerHTML = /* HTML */ `<section class="panel hero">
-      <p class="eyebrow">BUILT FROM THE PATCH, EXPLAINED TO YOU</p>
-      <h2>A plan for your champion.</h2>
-      <p>
-        Explore a champion’s options here. Imports follow your actual selection in the League
-        client.
-      </p>
-      <div class="row">
-        <div id="champion-picker"></div>
-        <button id="import" class="primary">Import client selection</button>
+  content.innerHTML = /* HTML */ `<section class="panel build-hero">
+      <div>
+        <p class="eyebrow">BUILD LIBRARY</p>
+        <h2>Choose your build</h2>
+        <p class="muted">Click a row, then import the parts you want.</p>
       </div>
-      <p class="muted">
-        Flash on ${initial.settings.flashSlot} · Automatic import
-        ${initial.settings.autoImport ? 'on' : 'off'} · Patch ${initial.manifest.version}
-      </p>
+      <div>
+        <div id="champion-picker"></div>
+        <p class="muted">
+          Flash on ${initial.settings.flashSlot} · Patch ${publicPatch(initial.manifest.version)}
+        </p>
+      </div>
     </section>
+    <section id="source-builds" class="panel"></section>
     <div id="imports" class="panel"></div>
-    <div id="plan"></div>
+    <details class="panel">
+      <summary>How the local plan was generated</summary>
+      <div id="plan"></div>
+    </details>
     <section class="panel">
       <h3>During your game</h3>
       <p>
@@ -528,30 +547,223 @@ function companion() {
       placeholder: 'Search champions…',
       onChange: (value) => {
         selectedId = Number(value) || undefined;
-        void showPlan();
+        browsingRole = undefined;
+        void showSourceBuilds();
       },
     },
   );
-  required(document.querySelector('#import')).addEventListener('click', async (event) => {
+  updateStatus();
+  browsingRole = undefined;
+  void showSourceBuilds();
+}
+async function showSourceBuilds(chosenRole?: string, refresh = false) {
+  const generation = ++sourceGeneration;
+  const target = document.querySelector('#source-builds');
+  const championId = selectedId;
+  if (!target) {
+    return;
+  }
+  if (!championId) {
+    target.innerHTML = '<h3>Builds</h3><p>Pick a champion to compare builds.</p>';
+    void showPlan();
+
+    return;
+  }
+  browsingRole =
+    chosenRole ??
+    browsingRole ??
+    (championId === initial.state.selectedId || initial.state.connection === 'Champion select'
+      ? initial.state.role?.toUpperCase()
+      : undefined) ??
+    initial.settings.role;
+  const role = browsingRole;
+  const context = `${championId}-${role}`;
+  target.innerHTML = `<div class="build-toolbar"><h3>Builds</h3>${rolePicker(role)}<button id="retry-source" type="button">Refresh</button></div>
+    <div id="source-preview"></div>
+    <div class="build-list-head" aria-hidden="true"><span>Source / variant</span><span>Main items</span><span>Main runes</span><span>Spells</span></div>
+    <div id="build-choices" class="build-choices" aria-label="Build choices"></div>
+    <p id="build-loading" class="muted">Fetching source builds…</p><div id="build-errors"></div>`;
+  target
+    .querySelectorAll<HTMLButtonElement>('[data-role]')
+    .forEach((button) =>
+      button.addEventListener('click', () => void showSourceBuilds(button.dataset.role)),
+    );
+  target
+    .querySelector('#retry-source')
+    ?.addEventListener('click', () => void showSourceBuilds(role, true));
+  const planRequest = api.plan(championId, role);
+  void showPlan(role, planRequest);
+  const externalRequest = api.sourceBuilds(championId, role, refresh).then(
+    (result) => result,
+    (error: unknown) => ({
+      builds: [],
+      errors: [error instanceof Error ? error.message : 'Sources unavailable'],
+    }),
+  );
+  const current = () => generation === sourceGeneration && target.isConnected;
+  const renderChoices = (builds: SourceBuild[]) => {
+    if (!current()) {
+      return;
+    }
+    const previous = buildSelection?.context === context ? buildSelection : undefined;
+    const selected =
+      (previous?.manual ? builds.find((entry) => entry.id === previous.id) : undefined) ??
+      (initial.settings.autoImport
+        ? builds.find((entry) => entry.provider === initial.settings.autoImportSource)
+        : undefined) ??
+      builds[0];
+    if (!selected) {
+      return;
+    }
+    buildSelection = { context, id: selected.id, manual: previous?.manual ?? false };
+    const groups = groupBuilds(builds);
+    const rows = groups.map((members) => ({
+      members,
+      build:
+        members.find((entry) => entry.id === selected.id) ??
+        members.find(
+          (entry) =>
+            initial.settings.autoImport && entry.provider === initial.settings.autoImportSource,
+        ) ??
+        required(members[0]),
+    }));
+    const choices = required(target.querySelector('#build-choices'));
+    hideTooltip();
+    choices.innerHTML = rows
+      .map(({ build, members }) =>
+        buildRow(
+          build,
+          initial,
+          members.some((entry) => entry.id === selected.id),
+          members,
+        ),
+      )
+      .join('');
+    const select = (build: SourceBuild) => {
+      choices.querySelectorAll<HTMLElement>('[data-build-id]').forEach((row) => {
+        const active = row.dataset.buildId === build.id;
+        row.dataset.selected = String(active);
+        row.querySelector('.build-select')?.setAttribute('aria-pressed', String(active));
+      });
+      const members = rows.find((entry) => entry.build.id === build.id)?.members ?? [build];
+      renderSourcePreview(required(target.querySelector('#source-preview')), build, members);
+    };
+    choices.querySelectorAll<HTMLElement>('[data-build-id]').forEach((button) =>
+      button.addEventListener('click', (event) => {
+        if ((event.target as Element).closest('[data-kind], [data-tooltip-title]')) {
+          return;
+        }
+        const build = rows.find((entry) => entry.build.id === button.dataset.buildId)?.build;
+        if (build) {
+          buildSelection = { context, id: build.id, manual: true };
+          select(build);
+        }
+      }),
+    );
+    select(selected);
+  };
+  let local: SourceBuild | undefined;
+  try {
+    const plan = await planRequest;
+    local = {
+      id: `local-${championId}-${role}`,
+      championId,
+      role,
+      provider: 'Local',
+      url: '',
+      patch: initial.manifest.patch,
+      label: 'Generated plan',
+      stats: 'Official data · current draft',
+      items: plan.build.map((item) => item.id),
+      mainItems: plan.build.map((item) => item.id),
+      runes: plan.runes,
+      summoners: plan.summoners,
+    };
+    renderChoices([local]);
+  } catch {
+    /* External sources remain available if the local model cannot make a plan. */
+  }
+  const result = await externalRequest;
+  if (!current()) {
+    return;
+  }
+  renderChoices([...(local ? [local] : []), ...result.builds]);
+  required(target.querySelector('#build-loading')).textContent =
+    'Six item slots per build. Empty slots mean the source only supplied a core.';
+  required(target.querySelector('#build-errors')).innerHTML = result.errors.length
+    ? `<details class="source-errors"><summary>${result.errors.length} source issue${result.errors.length === 1 ? '' : 's'}</summary>${result.errors.map((error) => `<p class="import-error">${escape(error)}</p>`).join('')}</details>`
+    : '';
+}
+function renderSourcePreview(
+  target: Element,
+  build: SourceBuild,
+  members: readonly SourceBuild[] = [build],
+) {
+  const compatible =
+    initial.state.selectedId === build.championId &&
+    !initial.state.selectionPreview &&
+    (initial.state.role?.toUpperCase() || initial.settings.role) === build.role;
+  const busy = Object.values(initial.state.imports).includes('Importing');
+  const others = [
+    ...new Set(
+      members.filter((entry) => entry.provider !== build.provider).map((entry) => entry.provider),
+    ),
+  ];
+  target.innerHTML = `<div class="selected-build-meta"><strong>${escape(build.provider)} · ${escape(build.label)}</strong><span>Patch ${escape(publicPatch(build.patch))}</span><span>${escape(build.stats)}</span></div>
+    <div class="build-import-bar"><fieldset id="source-parts"><legend>Import parts</legend>
+      ${(['items', 'runes', 'summoners'] as const)
+        .map((part) => {
+          const available = part === 'items' || Boolean(build[part]);
+
+          return `<label><input type="checkbox" value="${part}" ${chosenParts.has(part) && available ? 'checked' : ''} ${available ? '' : 'disabled'} />${{ items: 'Items', runes: 'Runes', summoners: 'Summoners' }[part]}${available ? '' : ' (unavailable)'}</label>`;
+        })
+        .join('')}
+    </fieldset><button id="import-source" data-champion="${build.championId}" data-role="${build.role}" class="primary" ${compatible && !busy ? '' : 'disabled'}>Import selected build</button></div>
+    <p class="build-note">${build.provider === 'Local' ? 'Generated from official data and the current draft.' : `${escape(build.population ?? 'Source default population')}. Rune and spell defaults may be shared across variants.`}
+      ${others.length ? `Same build also listed by ${escape(others.join(', '))}.` : ''}
+      ${build.itemOrder === 'inventory' ? 'Observed inventory core; purchase order is not known.' : ''}
+      ${compatible ? '' : 'Pick this champion and role in League to import.'}
+      ${build.patch !== initial.manifest.patch ? 'Source patch differs from the local catalog.' : ''}</p>`;
+  target.querySelectorAll<HTMLInputElement>('#source-parts input').forEach((input) =>
+    input.addEventListener('change', () => {
+      const part = input.value as ImportPart;
+      if (input.checked) {
+        chosenParts.add(part);
+      } else {
+        chosenParts.delete(part);
+      }
+    }),
+  );
+  target.querySelector('#import-source')?.addEventListener('click', async (event) => {
     const button = event.target as HTMLButtonElement;
+    const parts = [...target.querySelectorAll<HTMLInputElement>('#source-parts input:checked')].map(
+      (input) => input.value as ImportPart,
+    );
+    if (!parts.length) {
+      notify('Choose at least one part to import.');
+
+      return;
+    }
     button.disabled = true;
     try {
-      initial.state = await api.importSelected();
-      if (initial.state.selectedId && selectedId !== initial.state.selectedId) {
-        selectedId = initial.state.selectedId;
-        companion();
-      }
+      initial.state = await api.importSourceBuild(build.id, parts);
       updateStatus();
-    } catch (e) {
-      notify(e instanceof Error ? e.message : 'Import failed');
+      const failed = parts.filter((part) => initial.state.imports[part] !== 'Imported');
+      notify(
+        failed.length
+          ? `Import needs attention: ${failed.join(', ')}. See import status.`
+          : 'Chosen build parts imported.',
+      );
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Import failed');
     } finally {
-      button.disabled = false;
+      if (button.isConnected) {
+        button.disabled = false;
+      }
     }
   });
-  updateStatus();
-  void showPlan();
 }
-async function showPlan() {
+async function showPlan(role?: string, planRequest?: Promise<Plan>) {
   const generation = ++planGeneration;
   const target = document.querySelector('#plan');
   if (!target) {
@@ -565,7 +777,7 @@ async function showPlan() {
   target.innerHTML = '<div class="empty">Generating champion plan...</div>';
   try {
     const [plan, championEntry] = await Promise.all([
-      api.plan(selectedId),
+      planRequest ?? api.plan(selectedId, role),
       cachedDetail('champions', selectedId),
     ]);
     const champion = championEntry as Champion | undefined;
@@ -623,7 +835,7 @@ async function showPlan() {
               initial.runes.filter((style) => style.id === id),
             ),
           )}
-          <div class="rune-slot">
+          <div class="rune-shards">
             ${plan.runes.selectedPerkIds.slice(6).map(perkButton).join('')}
           </div>
           <h3>Summoner spells</h3>
@@ -636,8 +848,8 @@ async function showPlan() {
           </div>
           <p class="muted">Hover or focus an icon for details. Click to open its full entry.</p>
           <p class="muted">
-            Preview uses your assigned role for the client selection, otherwise the fallback role in
-            Settings. Builds refresh against both teams once all champions are selected.
+            Preview uses the role selected above. Role icons follow new assignments from the League
+            client. Local builds consider both teams once all champions are selected.
           </p>
         </section>
       </div>
@@ -671,6 +883,14 @@ function updateStatus() {
   patchWarning.textContent = initial.state.patchWarning ?? '';
   patchWarning.hidden = !initial.state.patchWarning;
   required(document.querySelector('#connection')).textContent = initial.state.connection;
+  const importButton = document.querySelector<HTMLButtonElement>('#import-source');
+  if (importButton) {
+    importButton.disabled =
+      initial.state.selectedId !== Number(importButton.dataset.champion) ||
+      Boolean(initial.state.selectionPreview) ||
+      (initial.state.role?.toUpperCase() || initial.settings.role) !== importButton.dataset.role ||
+      Object.values(initial.state.imports).includes('Importing');
+  }
   const imports = document.querySelector('#imports');
   if (imports) {
     const champion = initial.champions.find((c) => c.id === initial.state.selectedId);
@@ -688,7 +908,9 @@ function updateStatus() {
             >${escape(initial.state.role?.toUpperCase() ?? 'Select a champion in League')}</small
           >
         </div>
-        <span class="import-count">${count}/3 imported</span>
+        <span class="import-count"
+          >${initial.state.selectionPreview ? 'Preselection preview' : `${count}/3 imported`}</span
+        >
       </div>
       <div class="import-checklist" role="list" aria-label="Import status">
         ${[
@@ -708,9 +930,11 @@ function updateStatus() {
                 ? 'Importing…'
                 : failed
                   ? 'Needs attention'
-                  : champion
-                    ? 'Ready to import'
-                    : 'Waiting for selection';
+                  : initial.state.selectionPreview
+                    ? 'Waiting for champion selection'
+                    : champion
+                      ? 'Ready to import'
+                      : 'Waiting for selection';
 
             return `<div class="import-status ${state}" data-import="${key}" role="listitem">
           <input type="checkbox" disabled ${done ? 'checked' : ''} aria-label="${label} imported" />
@@ -720,7 +944,9 @@ function updateStatus() {
           })
           .join('')}
       </div>
-      ${champion ? `<p class="muted draft-status">${initial.state.draftKey ? 'Build considers both complete teams.' : 'Item build refreshes once the final champion is selected.'}</p>` : ''}`;
+      <p class="muted draft-status">
+        ${escape(initial.state.autoImportStatus || (initial.settings.autoImport ? `Automatic import: first ${initial.settings.autoImportSource} build` : 'Automatic import is off.'))}
+      </p>`;
   }
 }
 function renderSettings() {
@@ -731,10 +957,31 @@ function renderSettings() {
         <label for="flash-slot">Preferred Flash side</label>
         <div id="flash-picker"></div>
       </div>
+      <fieldset class="auto-import-setting">
+        <legend>Automatic build import</legend>
+        <label
+          ><input type="checkbox" name="autoImport" ${s.autoImport ? 'checked' : ''} />Import the
+          first build from my preferred source after champion selection</label
+        >
+        <input
+          type="hidden"
+          name="autoImportSource"
+          value="${escape(s.autoImportSource ?? 'Local')}"
+        />
+        <div
+          id="auto-import-sources"
+          class="source-picker"
+          role="group"
+          aria-label="Preferred build source"
+        >
+          ${buildSources.map((source) => `<button type="button" data-source="${source}" aria-pressed="${source === (s.autoImportSource ?? 'Local')}">${sourceIcon(source)}<span>${source}</span></button>`).join('')}
+        </div>
+        <p class="muted">
+          Imports available items, runes, and summoners. A manual import takes precedence. If the
+          source is unavailable, no other source is substituted.
+        </p>
+      </fieldset>
       <label class="setting"
-        ><input type="checkbox" name="autoImport" ${s.autoImport ? 'checked' : ''} />Import runes,
-        summoners, and item set after client champion selection</label
-      ><label class="setting"
         ><input type="checkbox" name="overlayEnabled" ${s.overlayEnabled ? 'checked' : ''} />Enable
         overlay</label
       ><label class="setting"
@@ -748,9 +995,51 @@ function renderSettings() {
         ></label
       >
       <div class="setting">
-        <label for="fallback-role">Fallback role</label>
-        <div id="role-picker"></div>
+        <span>Fallback role</span>
+        <div id="role-picker">
+          ${rolePicker(s.role)}<input
+            type="hidden"
+            id="fallback-role"
+            name="role"
+            value="${s.role}"
+          />
+        </div>
       </div>
+      <fieldset class="setting">
+        <legend>Skill marker calibration</legend>
+        <p>
+          Offsets use pixels at 1080p. Negative vertical values move up. Size changes keep the
+          marker centred on the skill.
+        </p>
+        <label
+          >Horizontal offset
+          <input
+            type="number"
+            name="skillOffsetX"
+            min="-500"
+            max="500"
+            value="${s.skillOffsetX ?? 0}"
+        /></label>
+        <label
+          >Vertical offset
+          <input
+            type="number"
+            name="skillOffsetY"
+            min="-500"
+            max="500"
+            value="${s.skillOffsetY ?? 0}"
+        /></label>
+        <label
+          >Size multiplier
+          <input
+            type="number"
+            name="skillSize"
+            min="0.5"
+            max="3"
+            step="0.05"
+            value="${s.skillSize ?? 1}"
+        /></label>
+      </fieldset>
       <label class="setting"
         >League installation folder<input
           type="text"
@@ -764,11 +1053,14 @@ function renderSettings() {
     <section class="panel">
       <h3>Data provenance</h3>
       <p>
-        Patch ${initial.manifest.version}, fetched ${escape(initial.manifest.fetchedAt)}. English
-        official descriptions are preserved. Dynamic values that the published data cannot resolve
-        are labelled explicitly.
+        Patch ${publicPatch(initial.manifest.version)} · Data Dragon ${initial.manifest.version},
+        fetched ${escape(initial.manifest.fetchedAt)}. English official descriptions are preserved.
+        Dynamic values that the published data cannot resolve are labelled explicitly.
       </p>
-      <p class="muted">No third-party builds, analytics, advertising, or API key required.</p>
+      <p class="muted">
+        The local engine works offline. External build sources are optional; no Riot API key is
+        required.
+      </p>
     </section>`;
   autocomplete(
     required(document.querySelector('#flash-picker')),
@@ -781,14 +1073,27 @@ function renderSettings() {
       required: true,
     },
   );
-  autocomplete(
-    required(document.querySelector('#role-picker')),
-    ['BOTTOM', 'JUNGLE', 'MIDDLE', 'TOP', 'UTILITY'].map((role) => ({
-      value: role,
-      name: role.charAt(0) + role.slice(1).toLowerCase(),
-    })),
-    { id: 'fallback-role', label: 'Fallback role', name: 'role', value: s.role, required: true },
+  const roleTarget = required(document.querySelector('#role-picker'));
+  roleTarget.querySelectorAll<HTMLButtonElement>('[data-role]').forEach((button) =>
+    button.addEventListener('click', () => {
+      required(document.querySelector<HTMLInputElement>('#fallback-role')).value =
+        button.dataset.role ?? '';
+      roleTarget
+        .querySelectorAll('[data-role]')
+        .forEach((entry) => entry.setAttribute('aria-pressed', String(entry === button)));
+    }),
   );
+  document
+    .querySelectorAll<HTMLButtonElement>('#auto-import-sources [data-source]')
+    .forEach((button) =>
+      button.addEventListener('click', () => {
+        required(document.querySelector<HTMLInputElement>('[name=autoImportSource]')).value =
+          button.dataset.source ?? 'Local';
+        document
+          .querySelectorAll('#auto-import-sources [data-source]')
+          .forEach((entry) => entry.setAttribute('aria-pressed', String(entry === button)));
+      }),
+    );
   required(document.querySelector('#browse')).addEventListener('click', async () => {
     const folder = await api.pickLeague();
     if (folder) {
@@ -802,11 +1107,16 @@ function renderSettings() {
       initial.settings = await api.saveSettings({
         flashSlot: form.get('flashSlot'),
         autoImport: form.has('autoImport'),
+        autoImportSource: form.get('autoImportSource'),
         overlayEnabled: form.has('overlayEnabled'),
         shopHotkey: form.get('shopHotkey'),
         leaguePath: form.get('leaguePath'),
         role: form.get('role'),
+        skillOffsetX: Number(form.get('skillOffsetX')),
+        skillOffsetY: Number(form.get('skillOffsetY')),
+        skillSize: Number(form.get('skillSize')),
       });
+      buildSelection = undefined;
       notify('Preferences saved.');
     } catch (e) {
       notify(e instanceof Error ? e.message : 'Unable to save settings.');
@@ -882,7 +1192,9 @@ document.body.addEventListener('click', (event) => {
   }
 });
 document.body.addEventListener('pointerover', (event) => {
-  const target = (event.target as Element).closest<HTMLElement>('[data-kind][data-id]');
+  const target = (event.target as Element).closest<HTMLElement>(
+    '[data-kind][data-id], [data-tooltip-title]',
+  );
   if (target) {
     void showTooltip(target);
   }
@@ -890,13 +1202,18 @@ document.body.addEventListener('pointerover', (event) => {
 document.body.addEventListener('pointerout', (event) => {
   if (
     hoverTarget &&
+    event.target instanceof Node &&
+    hoverTarget.contains(event.target) &&
+    document.activeElement !== hoverTarget &&
     !(event.relatedTarget instanceof Node && hoverTarget.contains(event.relatedTarget))
   ) {
     hideTooltip();
   }
 });
 document.body.addEventListener('focusin', (event) => {
-  const target = (event.target as Element).closest<HTMLElement>('[data-kind][data-id]');
+  const target = (event.target as Element).closest<HTMLElement>(
+    '[data-kind][data-id], [data-tooltip-title]',
+  );
   if (target) {
     void showTooltip(target);
   }
@@ -955,19 +1272,26 @@ required(document.querySelector('#close-detail')).addEventListener('click', () =
 try {
   initial = await api.init();
   selectedId = initial.state.selectedId ?? undefined;
-  required(document.querySelector('#patch')).textContent = `PATCH ${initial.manifest.version}`;
+  required(document.querySelector('#patch')).textContent =
+    `PATCH ${publicPatch(initial.manifest.version)}`;
   api.onState((state) => {
     const championChanged = state.selectedId !== initial.state.selectedId;
+    const roleChanged = state.role !== initial.state.role;
+    const previewChanged = state.selectionPreview !== initial.state.selectionPreview;
+    const clearedPreview =
+      !state.selectedId &&
+      initial.state.selectionPreview &&
+      selectedId === initial.state.selectedId;
     const draftChanged = state.draftKey !== initial.state.draftKey;
     initial.state = state;
     updateStatus();
-    if (championChanged && state.selectedId) {
-      selectedId = state.selectedId;
+    if ((championChanged && state.selectedId) || clearedPreview) {
+      selectedId = state.selectedId ?? undefined;
       if (currentView === 'companion') {
         companion();
       }
-    } else if (draftChanged && currentView === 'companion') {
-      void showPlan();
+    } else if ((draftChanged || roleChanged || previewChanged) && currentView === 'companion') {
+      void showSourceBuilds(roleChanged ? state.role?.toUpperCase() : undefined);
     }
   });
   render();

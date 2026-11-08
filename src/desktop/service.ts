@@ -9,6 +9,8 @@ import type {
   Session,
   SummonerAccount,
   Settings,
+  SourceBuild,
+  ImportPart,
 } from '../core/types.js';
 import {
   liveGameSchema,
@@ -21,6 +23,8 @@ import { ApiError, LocalApi, findLockfile, parseLockfile } from '../integrations
 import { importItems, importRunes, importSummoners } from '../integrations/imports.js';
 import { questKind } from '../core/role-items.js';
 import { completedDraftKey, draftGame } from '../core/draft.js';
+import { SourceBuildProvider } from '../integrations/source-builds.js';
+import { importableParts, roles } from '../core/builds.js';
 
 import { samePatch, patchWarning, publishedVersions } from '../core/versions.js';
 export { samePatch } from '../core/versions.js';
@@ -30,9 +34,11 @@ interface Transports {
   live: ApiClient;
   connect: () => Promise<ApiClient | undefined>;
   versions?: () => Promise<string[]>;
+  sourceFetch?: typeof fetch;
 }
 export class CompanionService {
   readonly engine: Engine;
+  readonly sourceBuilds: SourceBuildProvider;
   private client?: ApiClient;
   private identity = '';
   private readonly live: ApiClient;
@@ -52,7 +58,11 @@ export class CompanionService {
   private currentSession?: Session;
   private summoner?: SummonerAccount;
   private importing = false;
-  private nextImport = 0;
+  private importEpoch = 0;
+  private automaticPending = '';
+  private automaticDone = '';
+  private manualSelection = '';
+  private nextAutomaticAttempt = 0;
   private roleQuestPurchased = false;
   private lastGameTime = Infinity;
   private latest: ServiceState = {
@@ -71,6 +81,7 @@ export class CompanionService {
     private transports?: Transports,
   ) {
     this.engine = new Engine(catalog);
+    this.sourceBuilds = new SourceBuildProvider(catalog, transports?.sourceFetch);
     this.live = transports?.live ?? new LocalApi(2999);
     this.poller = new Poller(
       () => this.tick(),
@@ -103,15 +114,22 @@ export class CompanionService {
       : undefined;
   }
   settingsChanged() {
+    this.importEpoch++;
+    this.automaticDone = '';
+    this.manualSelection = '';
+    this.nextAutomaticAttempt = 0;
     this.imported.clear();
-    this.nextImport = 0;
-    this.publish({ imports: {} });
+    this.publish({ imports: {}, autoImportStatus: '' });
   }
   private publish(patch: Partial<ServiceState>) {
     if (this.stopped) {
       return;
     }
-    this.latest = { ...this.latest, ...patch };
+    this.latest = {
+      ...this.latest,
+      ...patch,
+      ...(patch.selectedId === null ? { selectionPreview: false } : {}),
+    };
     const encoded = JSON.stringify(this.latest);
     if (encoded !== this.lastPayload) {
       this.lastPayload = encoded;
@@ -275,6 +293,7 @@ export class CompanionService {
         this.publish({
           connection: 'In game',
           selectedId: champ.id,
+          selectionPreview: false,
           live: {
             champion: champ.name,
             level: game.activePlayer.level,
@@ -318,32 +337,37 @@ export class CompanionService {
       );
       this.currentSession = session;
       const selection = session.myTeam?.find((p) => p.cellId === session.localPlayerCellId);
-      const championId = selection?.championId;
+      const championId = selection?.championId || selection?.championPickIntent;
       const key = `${session.gameId}:${championId}:${selection?.assignedPosition}`;
       if (key !== this.sessionKey) {
+        this.importEpoch++;
+        this.automaticDone = '';
+        this.manualSelection = '';
+        this.nextAutomaticAttempt = 0;
         this.sessionKey = key;
         this.imported.clear();
-        this.nextImport = 0;
-        this.publish({ imports: {} });
+        this.publish({ imports: {}, autoImportStatus: '' });
       }
       const draftKey = completedDraftKey(session);
       if (draftKey !== this.draftKey) {
         this.draftKey = draftKey;
-        this.imported.delete('items');
-        this.nextImport = 0;
-        const imports = { ...this.latest.imports };
-        delete imports.items;
-        this.publish({ imports });
       }
       this.publish({
         draftKey,
         connection: 'Champion select',
         selectedId: championId || null,
+        selectionPreview: Boolean(championId && !selection?.championId),
         role: selection?.assignedPosition || this.settings().role,
       });
-      if (championId && this.settings().autoImport && Date.now() >= this.nextImport) {
-        await this.importSelected();
+      if (championId && key !== this.sourceFetchKey) {
+        this.sourceFetchKey = key;
+        // Fetch in the main process without delaying the client poll or overlay.
+        void this.sourceBuilds.load(
+          championId,
+          selection?.assignedPosition || this.settings().role,
+        );
       }
+      this.scheduleAutomaticImport();
       this.disconnected = 0;
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) {
@@ -356,9 +380,131 @@ export class CompanionService {
 
     return 2000;
   }
-  async importSelected() {
-    if (this.importing) {
+  private sourceFetchKey = '';
+  private localBuild(championId: number, role: string): SourceBuild {
+    const champ = this.catalog.champions.find((entry) => entry.id === championId);
+    if (!champ || !roles.includes(role as (typeof roles)[number])) {
+      throw new Error('Unknown local champion or role');
+    }
+    const items = this.engine.build(champ, 11, role, this.planningGame(champ.id));
+
+    return {
+      id: `local-${champ.id}-${role}`,
+      championId: champ.id,
+      role,
+      provider: 'Local',
+      url: '',
+      patch: this.catalog.patch,
+      label: 'Generated plan',
+      stats: 'Official data · current draft',
+      items,
+      mainItems: items,
+      runes: this.engine.runes(champ, role),
+      summoners: this.engine.summoners(champ, role, this.settings().flashSlot),
+    };
+  }
+  private scheduleAutomaticImport() {
+    const settings = this.settings();
+    const selection = this.currentSession?.myTeam.find(
+      (entry) => entry.cellId === this.currentSession?.localPlayerCellId,
+    );
+    if (
+      !settings.autoImport ||
+      !settings.autoImportSource ||
+      !selection?.championId ||
+      this.importing ||
+      this.manualSelection === this.sessionKey ||
+      Date.now() < this.nextAutomaticAttempt
+    ) {
       return;
+    }
+    const source = settings.autoImportSource;
+    const key = `${this.sessionKey}:${source}`;
+    if (this.automaticDone === key || this.automaticPending === key) {
+      return;
+    }
+    const epoch = this.importEpoch;
+    const championId = selection.championId;
+    const role = selection.assignedPosition?.toUpperCase() || settings.role;
+    this.automaticPending = key;
+    this.nextAutomaticAttempt = Date.now() + 30_000;
+    this.publish({ autoImportStatus: `Loading first ${source} build…` });
+    void (async () => {
+      const build =
+        source === 'Local'
+          ? this.localBuild(championId, role)
+          : (await this.sourceBuilds.load(championId, role, false, source)).builds.find(
+              (entry) => entry.provider === source,
+            );
+      // A slow provider must never apply a previous pick or overwrite an explicit user choice.
+      if (
+        this.stopped ||
+        epoch !== this.importEpoch ||
+        !this.currentSession ||
+        !this.settings().autoImport ||
+        this.settings().autoImportSource !== source
+      ) {
+        return;
+      }
+      if (!build) {
+        throw new Error(`No ${source} build available for this role. Choose a build or retry.`);
+      }
+      const parts = importableParts(build);
+      await this.importSelected(
+        build,
+        parts.filter((part) => this.latest.imports[part] !== 'Imported'),
+      );
+      if (epoch !== this.importEpoch || this.stopped) {
+        return;
+      }
+      const done = parts.every((part) => this.latest.imports[part] === 'Imported');
+      if (done) {
+        this.automaticDone = key;
+      }
+      this.publish({
+        autoImportStatus: done
+          ? `First ${source} build imported.`
+          : `Some ${source} imports failed. See import status.`,
+      });
+    })()
+      .catch((error: unknown) => {
+        if (epoch === this.importEpoch) {
+          this.publish({
+            autoImportStatus: error instanceof Error ? error.message : 'Automatic import failed',
+          });
+        }
+      })
+      .finally(() => {
+        if (this.automaticPending === key) {
+          this.automaticPending = '';
+        }
+      });
+  }
+  async importSourceBuild(id: string, parts: ImportPart[]) {
+    const local =
+      typeof id === 'string'
+        ? id.match(/^local-(\d+)-(TOP|JUNGLE|MIDDLE|BOTTOM|UTILITY)$/)
+        : undefined;
+    const build = local ? this.localBuild(Number(local[1]), local[2]) : this.sourceBuilds.get(id);
+    if (
+      !build ||
+      !Array.isArray(parts) ||
+      !parts.length ||
+      parts.some((part) => !['items', 'summoners', 'runes'].includes(part))
+    ) {
+      throw new Error('Choose an available build and at least one part to import');
+    }
+    this.importEpoch++;
+    this.manualSelection = this.sessionKey;
+    this.publish({ autoImportStatus: '' });
+    await this.importSelected(build, [...new Set(parts)]);
+  }
+  async importSelected(
+    source?: SourceBuild,
+    parts: ImportPart[] = ['items', 'summoners', 'runes'],
+  ) {
+    if (this.importing) {
+      throw new Error('An import is already in progress');
     }
     const api = this.client;
     if (!api || !this.currentSession) {
@@ -371,9 +517,26 @@ export class CompanionService {
     if (!champ) {
       throw new Error('No known champion selected');
     }
+    const role = selection?.assignedPosition?.toUpperCase() || this.settings().role;
+    if (source && (source.championId !== champ.id || source.role !== role)) {
+      throw new Error('Build does not match the current client champion and role');
+    }
+    if (
+      source &&
+      ((parts.includes('runes') && !source.runes) ||
+        (parts.includes('summoners') && !source.summoners))
+    ) {
+      throw new Error('The source does not provide the selected import part');
+    }
+    if (source) {
+      // Explicit imports can replace any earlier source or retry a failed part.
+      for (const part of parts) {
+        this.imported.delete(part);
+      }
+    }
     this.importing = true;
     const key = this.sessionKey;
-    this.nextImport = Date.now() + 30_000;
+    const epoch = this.importEpoch;
     try {
       this.summoner = summonerAccountSchema.parse(
         await api.request('GET', '/lol-summoner/v1/current-summoner'),
@@ -382,7 +545,7 @@ export class CompanionService {
       const mode = flow.gameData?.queue?.gameMode,
         map = flow.gameData?.queue?.mapId;
       if (mode !== 'CLASSIC' || map !== 11) {
-        throw new Error('Automatic imports currently support Summoner’s Rift Classic only');
+        throw new Error('Imports currently support Summoner’s Rift Classic only');
       }
       const actions: [string, () => Promise<void>][] = [
         [
@@ -393,6 +556,7 @@ export class CompanionService {
               this.engine,
               champ,
               selection?.assignedPosition?.toUpperCase() || this.settings().role,
+              source?.runes,
             ),
         ],
         [
@@ -407,6 +571,7 @@ export class CompanionService {
               mode,
               required(this.summoner).summonerLevel,
               required(this.summoner).summonerId,
+              source?.summoners,
             ),
         ],
         [
@@ -420,30 +585,57 @@ export class CompanionService {
               map,
               selection?.assignedPosition?.toUpperCase() || this.settings().role,
               this.planningGame(champ.id),
+              source && source.provider !== 'Local'
+                ? {
+                    items: source.items,
+                    label: `${source.provider} · ${source.label}`,
+                    patch: source.patch,
+                    itemOrder: source.itemOrder,
+                  }
+                : undefined,
             ),
         ],
       ];
       for (const [name, action] of actions) {
+        if (!parts.includes(name as ImportPart)) {
+          continue;
+        }
         if (this.imported.has(name)) {
           continue;
         }
         // Revalidate the selection immediately before each write sequence.
         const fresh = sessionSchema.parse(await api.request('GET', '/lol-champ-select/v1/session'));
         if (
+          this.stopped ||
+          epoch !== this.importEpoch ||
           fresh.myTeam?.find((p) => p.cellId === fresh.localPlayerCellId)?.championId !==
             champ.id ||
           this.sessionKey !== key ||
-          (name === 'items' &&
+          (source &&
+            (fresh.gameId !== this.currentSession?.gameId ||
+              (fresh.myTeam
+                .find((p) => p.cellId === fresh.localPlayerCellId)
+                ?.assignedPosition?.toUpperCase() || this.settings().role) !== source.role)) ||
+          (!source &&
+            name === 'items' &&
             completedDraftKey(fresh) !== completedDraftKey(required(this.currentSession)))
         ) {
-          throw new Error('Champion selection changed; import cancelled');
+          throw new Error(
+            'Champion selection changed or import preferences changed; import cancelled',
+          );
         }
         try {
           this.publish({ imports: { ...this.latest.imports, [name]: 'Importing' } });
           await action();
+          if (this.stopped || epoch !== this.importEpoch) {
+            return;
+          }
           this.imported.add(name);
           this.publish({ imports: { ...this.latest.imports, [name]: 'Imported' } });
         } catch (e) {
+          if (this.stopped || epoch !== this.importEpoch) {
+            return;
+          }
           this.publish({
             imports: {
               ...this.latest.imports,

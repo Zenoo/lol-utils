@@ -29,6 +29,73 @@ const makeItem = (id: number, cost: number, from: number[] = []): Item => ({
   rules: { tier: 5, groups: [], stats: {}, limits: {}, values: {}, calculations: {} },
 });
 
+test('distance amplification values sustained spacing and actual attack damage rather than full range or item price', () => {
+  const zeri = required(catalog.champions.find((champion) => champion.alias === 'Zeri'));
+  const item = required(catalog.items.find((entry) => entry.name === 'Hexoptics C44'));
+  const withoutAmp = (candidate: Item): Item => ({
+    ...candidate,
+    rules: {
+      ...required(candidate.rules),
+      values: { ...candidate.rules?.values, MaxDamageAmp: 0 },
+    },
+  });
+  const bonus = (range: number, candidate = item, attackDamage = 100) => {
+    const champion = { ...zeri, stats: { ...zeri.stats, attackrange: range } };
+    const context = engine.context(champion);
+
+    return (
+      (engine.scoreItem(candidate, champion, undefined, context, { attackDamage }).score -
+        engine.scoreItem(withoutAmp(candidate), champion, undefined, context, { attackDamage })
+          .score) *
+      candidate.gold.total
+    );
+  };
+  assert.ok(bonus(650) > bonus(550));
+  assert.ok(bonus(550) > bonus(500));
+  assert.ok(bonus(550, item, 300) > bonus(550, item, 100));
+  assert.ok(
+    Math.abs(
+      bonus(550) - bonus(550, { ...item, gold: { ...item.gold, total: item.gold.total * 2 } }),
+    ) < 1e-8,
+  );
+  const reasons = engine.scoreItem(item, zeri).reasons.join(' ');
+  assert.match(reasons, /estimated at 358 range; maximum needs 500/);
+  assert.match(reasons, /Spacing is not observed/);
+  assert.ok(eligible(item, zeri, 11), 'uncertain spacing should not blacklist a legal item');
+});
+
+test('slow resistance has identical value for percentage and fraction source conventions', () => {
+  const champion = required(catalog.champions.find((c) => c.alias === 'Darius'));
+  const boots = required(catalog.items.find((i) => i.id === 3009));
+  const change = (value: number) => ({
+    ...boots,
+    rules: {
+      ...required(boots.rules),
+      values: { ...boots.rules?.values, SlowResistTooltip: value },
+    },
+  });
+  const percentage = engine.scoreItem(change(25), champion).score;
+  const fraction = engine.scoreItem(change(0.25), champion).score;
+  assert.equal(percentage, fraction);
+  assert.ok(percentage > engine.scoreItem(change(0), champion).score);
+  assert.ok(percentage < engine.scoreItem(change(0), champion).score * 1.2);
+});
+
+test('conditional takedown healing scales with bonus AD and remains discounted', () => {
+  const champion = required(catalog.champions.find((c) => c.alias === 'Darius'));
+  const item = required(catalog.items.find((i) => i.id === 6333));
+  const withoutHeal = {
+    ...item,
+    rules: { ...required(item.rules), values: { ...item.rules?.values, BonusADRatio: 0 } },
+  };
+  const context = engine.context(champion);
+  const benefit = (ad: number) =>
+    engine.scoreItem(item, champion, undefined, context, { attackDamage: ad }).score -
+    engine.scoreItem(withoutHeal, champion, undefined, context, { attackDamage: ad }).score;
+  assert.ok(benefit(250) > benefit(100));
+  assert.ok(benefit(100) > 0);
+});
+
 test('recipe expansion credits each owned copy once, including repeated nested components', () => {
   const a = makeItem(1, 300),
     b = makeItem(2, 700, [1, 1]),

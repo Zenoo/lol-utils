@@ -2,6 +2,17 @@ export const samePatch = (a: string, b: string) =>
   /^\d+\.\d+\./.test(a) &&
   a.split('.').slice(0, 2).join('.') === b.split('.').slice(0, 2).join('.');
 
+/** Riot's public labels use the year since 2025; game/CDN versions retain season numbers. */
+export function publicPatch(dataVersion: string): string {
+  const parts = dataVersion.match(/^(\d+)\.(\d+)/);
+  if (!parts) {
+    return 'unknown';
+  }
+  const season = Number(parts[1]);
+
+  return `${season >= 15 ? season + 10 : season}.${parts[2]}`;
+}
+
 /** Client build numbers are not Data Dragon revisions. Prefer a published patch identifier. */
 export function shortVersion(raw: string, published: readonly string[] = []): string {
   const parts = raw.match(/^(\d+)\.(\d+)(?:\.(\d+))?/);
@@ -46,17 +57,17 @@ export function patchWarning(
 ): string {
   const known = [...versions, data];
   if (game && !samePatch(game, data)) {
-    return `Game ${shortVersion(game, known)} / data ${shortVersion(data)}. Recommendations may be outdated.`;
+    return `Game patch ${publicPatch(game)} (${shortVersion(game, known)}) / data patch ${publicPatch(data)} (Data Dragon ${shortVersion(data)}). Recommendations may be outdated.`;
   }
   const latest = versions[0];
   if (latest && latest !== data) {
-    return `Data ${shortVersion(data)} is outdated. Latest patch: ${shortVersion(latest)}.`;
+    return `Data patch ${publicPatch(data)} (Data Dragon ${shortVersion(data)}) is outdated. Latest patch: ${publicPatch(latest)} (Data Dragon ${shortVersion(latest)}).`;
   }
   if (!game && hasClient) {
-    return `Game patch could not be verified. Using data ${shortVersion(data)}.`;
+    return `Game patch could not be verified. Using patch ${publicPatch(data)} (Data Dragon ${shortVersion(data)}).`;
   }
   if (checkFailed) {
-    return `Latest patch could not be checked. Using data ${shortVersion(data)}.`;
+    return `Latest patch could not be checked. Using patch ${publicPatch(data)} (Data Dragon ${shortVersion(data)}).`;
   }
 
   return '';

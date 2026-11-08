@@ -1,12 +1,73 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createOverlayWindow } from './overlay-window.js';
-import type { ServiceState } from '../core/types.js';
+import type { ServiceState, ImportPart, SourceBuilds } from '../core/types.js';
+import { publicPatch } from '../core/versions.js';
 
 /** Exercise the actual renderer and preload bridge without touching League. */
 export async function smoke(main: BrowserWindow, initialState: ServiceState) {
+  // Exercise source choice and component imports deterministically, without public sites or LCU.
+  let importedParts: ImportPart[] = [];
+  let importedSource = '';
+  ipcMain.removeHandler('source-builds');
+  ipcMain.handle(
+    'source-builds',
+    (_event, championId: number, role: string) =>
+      ({
+        fetchedAt: new Date().toISOString(),
+        errors: [],
+        builds: [
+          {
+            id: 'smoke-tank',
+            label: 'Tank',
+            items: [3068, 6665, 3075],
+            itemOrder: 'inventory' as const,
+          },
+          {
+            id: 'smoke-ap',
+            label: 'AP',
+            items: [3100, 4645, 3089],
+            itemOrder: 'purchase' as const,
+          },
+          {
+            id: 'smoke-tank-copy',
+            label: 'Same tank build from another provider',
+            items: [3075, 6665, 3068],
+            itemOrder: 'inventory' as const,
+          },
+        ].map((variant) => ({
+          ...variant,
+          championId,
+          role,
+          provider: variant.id === 'smoke-tank-copy' ? 'LoLalytics' : 'OP.GG',
+          url: 'https://op.gg/',
+          patch: '16.22',
+          stats: 'Fixture',
+          runes: {
+            selectedPerkIds: [8230, 8226, 8210, 8237, 8345, 8347, 5008, 5008, 5001],
+            primaryStyleId: 8200,
+            subStyleId: 8300,
+            name: 'LoL Utils test',
+            current: true,
+          },
+          summoners: { spell1Id: 4, spell2Id: 12 },
+        })),
+      }) satisfies SourceBuilds,
+  );
+  ipcMain.removeHandler('import-source-build');
+  ipcMain.handle('import-source-build', (_event, id: string, parts: ImportPart[]) => {
+    importedSource = id;
+    importedParts = parts;
+
+    return {
+      ...initialState,
+      selectedId: 1,
+      role: 'middle',
+      imports: Object.fromEntries(parts.map((part) => [part, 'Imported'])),
+    };
+  });
   main.webContents.setBackgroundThrottling(false);
   const errors: string[] = [];
   main.webContents.on('console-message', (details) => {
@@ -40,6 +101,11 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
   await mkdir(artifacts, { recursive: true });
   try {
     await waitFor('Boolean(document.querySelector("#champion"))');
+    const displayedPatch = await evaluate('document.querySelector("#patch").textContent');
+    const version = await evaluate('window.companion.init().then(data => data.manifest.version)');
+    if (displayedPatch !== `PATCH ${publicPatch(String(version))}`) {
+      throw new Error('App patch label must use Riot public patch naming');
+    }
     main.webContents.send('state', {
       ...initialState,
       patchWarning: 'Test patch mismatch: guidance continues',
@@ -49,25 +115,11 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
     if (await evaluate('document.querySelectorAll("select, datalist").length')) {
       throw new Error('Native select remains in settings');
     }
-    await evaluate(
-      'document.querySelector("#fallback-role").dispatchEvent(new FocusEvent("focus"))',
-    );
-    await alphabetical('#fallback-role-options [role=option]');
     await evaluate(`(() => {
-      const input = document.querySelector('#fallback-role');
-      input.value = 'unknown role'; input.dispatchEvent(new Event('input'));
-    })()`);
-    if (
-      !(await evaluate(
-        `!document.querySelector('#fallback-role').checkValidity() && document.querySelector('[name=role]').value === ''`,
-      ))
-    ) {
-      throw new Error('Autocomplete accepted an unknown role');
-    }
-    await evaluate(`(() => {
-      const input = document.querySelector('#fallback-role');
-      input.value = 'mid'; input.dispatchEvent(new Event('input'));
-      document.querySelector('#fallback-role-options [role=option]').click();
+      document.querySelector('#role-picker [data-role="TOP"]').click();
+      document.querySelector('#role-picker [data-role="MIDDLE"]').click();
+      document.querySelector('#auto-import-sources [data-source="OP.GG"]').click();
+      document.querySelector('[name=autoImport]').checked = true;
       const flash = document.querySelector('#flash-slot');
       flash.dispatchEvent(new FocusEvent('focus'));
       flash.dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true}));
@@ -78,7 +130,7 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
         `new FormData(document.querySelector('#settings-form')).get('role') === 'MIDDLE' && new FormData(document.querySelector('#settings-form')).get('flashSlot') === 'D'`,
       ))
     ) {
-      throw new Error('Autocomplete submitted a label instead of the setting value');
+      throw new Error('Role icons or Flash picker submitted the wrong setting value');
     }
     if (
       !(await evaluate(
@@ -91,7 +143,7 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
     await waitFor('document.querySelector("#patch-warning").hidden');
     await evaluate('document.querySelector("#settings-form").requestSubmit()');
     await waitFor(
-      'window.companion.init().then(data => data.settings.role === "MIDDLE" && data.settings.flashSlot === "D")',
+      'window.companion.init().then(data => data.settings.role === "MIDDLE" && data.settings.flashSlot === "D" && data.settings.autoImportSource === "OP.GG" && data.settings.autoImport === true)',
     );
     await evaluate('document.querySelector("[data-view=companion]").click()');
     await evaluate(
@@ -120,7 +172,109 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
     await waitFor(
       `document.querySelector('#champion').value === 'Annie' && document.querySelector('#champion').getAttribute('aria-expanded') === 'false'`,
     );
+    await waitFor('document.querySelectorAll(".build-choice").length === 3');
+    if (
+      !(await evaluate(
+        `Array.from(document.querySelectorAll('.build-choice')).every(row => row.querySelectorAll('[data-asset-kind=item]').length === 6 && row.querySelectorAll('[data-asset-kind=rune]').length === 6 && row.querySelectorAll('[data-asset-kind=summoner]').length === 2 && row.querySelector('.source-icon')) && document.querySelector('[data-build-id="local-1-MIDDLE"] [data-asset-kind=item] img')`,
+      ))
+    ) {
+      throw new Error('Unified build rows are missing source, item, rune, or summoner icons');
+    }
+    await evaluate('document.querySelector("[data-build-id=smoke-tank]").click()');
+    if (
+      !(await evaluate(
+        '!document.querySelector("[data-build-id=smoke-tank-copy]") && document.querySelector("#source-preview").textContent.includes("LoLalytics")',
+      ))
+    ) {
+      throw new Error('Duplicate builds were not merged with source attribution');
+    }
+    for (const kind of ['item', 'rune', 'summoner']) {
+      const selector = `[data-build-id=smoke-ap] [data-asset-kind=${kind}][data-kind]`;
+      const name = await evaluate(
+        `document.querySelector(${JSON.stringify(selector)}).getAttribute('aria-label')`,
+      );
+      await evaluate(
+        `document.querySelector(${JSON.stringify(selector)}).querySelector('img').dispatchEvent(new PointerEvent('pointerover', {bubbles:true}))`,
+      );
+      await waitFor(
+        `!document.querySelector('#game-tooltip').hidden && document.querySelector('#game-tooltip strong').textContent === ${JSON.stringify(name)} && document.querySelector('#game-tooltip .tooltip-description').textContent.length > 10`,
+      );
+    }
+    // A hidden/offscreen window does not emit native focusin; exercise the same
+    // delegated focus event used by keyboard navigation in the visible app.
+    await evaluate(
+      'document.querySelector("[data-build-id=smoke-ap] [data-asset-kind=rune]").focus({preventScroll:true}); document.querySelector("[data-build-id=smoke-ap] [data-asset-kind=rune]").dispatchEvent(new FocusEvent("focusin", {bubbles:true}))',
+    );
+    await waitFor(
+      '!document.querySelector("#game-tooltip").hidden && document.activeElement.getAttribute("aria-describedby") === "game-tooltip"',
+    );
+    await evaluate(
+      'document.querySelector("[data-build-id=smoke-tank] .build-provider").focus({preventScroll:true}); document.querySelector("[data-build-id=smoke-tank] .build-provider").dispatchEvent(new FocusEvent("focusin", {bubbles:true}))',
+    );
+    await waitFor(
+      '!document.querySelector("#game-tooltip").hidden && document.querySelector("#game-tooltip strong").textContent.includes("LoLalytics")',
+    );
+    await evaluate(
+      'document.querySelector("[data-build-id=smoke-tank] .unspecified").focus({preventScroll:true}); document.querySelector("[data-build-id=smoke-tank] .unspecified").dispatchEvent(new FocusEvent("focusin", {bubbles:true}))',
+    );
+    await waitFor(
+      '!document.querySelector("#game-tooltip").hidden && document.querySelector("#game-tooltip strong").textContent === "Not supplied by this source"',
+    );
+    await evaluate(
+      'document.querySelector("[data-build-id=smoke-ap] [data-asset-kind=item]").click()',
+    );
+    await waitFor('document.querySelector("#detail").open');
+    if (
+      !(await evaluate(
+        'document.querySelector("[data-build-id=smoke-tank]").dataset.selected === "true"',
+      ))
+    ) {
+      throw new Error('Inspecting an icon changed the selected build');
+    }
+    await evaluate('document.querySelector("#close-detail").click()');
+    if (
+      !(await evaluate(
+        'document.querySelector("#source-preview").textContent.includes("purchase order is not known") && document.querySelector("[data-build-id=smoke-tank]").textContent.includes("OP.GG")',
+      ))
+    ) {
+      throw new Error('Source provenance or inventory-order warning is missing');
+    }
+    if (!(await evaluate('document.querySelector("#import-source").disabled'))) {
+      throw new Error('Source browsing enabled an import without a client selection');
+    }
+    main.webContents.send('state', { ...initialState, selectedId: 1, role: 'middle' });
+    await waitFor(
+      'document.querySelector("#import-source") && !document.querySelector("#import-source").disabled',
+    );
+    await waitFor(
+      'document.querySelector("#source-builds [data-role=MIDDLE]").getAttribute("aria-pressed") === "true"',
+    );
+    await evaluate('document.querySelector("#source-builds [data-role=TOP]").click()');
+    await waitFor('Boolean(document.querySelector("[data-build-id=local-1-TOP]"))');
+    if (!(await evaluate('document.querySelector("#import-source").disabled'))) {
+      throw new Error('Browsing another role enabled a mismatched import');
+    }
+    main.webContents.send('state', { ...initialState, selectedId: 1, role: 'bottom' });
+    await waitFor(
+      'Boolean(document.querySelector("[data-build-id=local-1-BOTTOM]")) && document.querySelector("#source-builds [data-role=BOTTOM]").getAttribute("aria-pressed") === "true"',
+    );
+    main.webContents.send('state', { ...initialState, selectedId: 1, role: 'middle' });
+    await waitFor(
+      'Boolean(document.querySelector("[data-build-id=local-1-MIDDLE]")) && document.querySelectorAll(".build-choice").length === 3',
+    );
+    await evaluate(`(() => {
+      document.querySelector('[data-build-id=smoke-ap]').click();
+      document.querySelector('#source-parts [value=items]').checked = false;
+      document.querySelector('#source-parts [value=summoners]').checked = false;
+      document.querySelector('#source-parts [value=runes]').checked = true;
+      document.querySelector('#import-source').click();
+    })()`);
+    await waitFor('document.querySelector("[data-import=runes]").classList.contains("success")');
+    if (importedSource !== 'smoke-ap' || importedParts.join(',') !== 'runes') {
+      throw new Error('Source variant or selected import parts were not preserved');
+    }
     await waitFor('document.querySelectorAll("#plan .build-item").length >= 6');
+    await evaluate('document.querySelector("#plan").closest("details").open = true');
     if (
       !(await evaluate(
         `Array.from(document.querySelectorAll('#plan .build-reason')).length === 6 && Array.from(document.querySelectorAll('#plan .build-reason')).every(node => node.textContent.trim().length > 10)`,
@@ -143,6 +297,56 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
     ) {
       throw new Error('Skill or rune icons are missing');
     }
+    const originalSize = main.getSize();
+    for (const width of [900, 1240, 1600]) {
+      main.setSize(width, 900);
+      await evaluate(
+        'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
+      );
+      const fits = await evaluate(`(() => {
+        const trees = Array.from(document.querySelectorAll('#plan .rune-tree'));
+        const rects = trees.map(tree => tree.getBoundingClientRect());
+        return trees.length === 2 && trees.every(tree => {
+          const bounds = tree.getBoundingClientRect();
+          const icons = Array.from(tree.querySelectorAll('.icon-button')).map(icon => icon.getBoundingClientRect());
+          return icons.every((r, i) => r.width === 34 && r.height === 34 &&
+            r.left >= bounds.left && r.right <= bounds.right && r.top >= bounds.top && r.bottom <= bounds.bottom &&
+            icons.every((other, j) => i === j || r.right <= other.left || r.left >= other.right || r.bottom <= other.top || r.top >= other.bottom));
+        }) && (rects[0].right <= rects[1].left || rects[0].bottom <= rects[1].top);
+      })()`);
+      const rowsFit =
+        await evaluate(`Array.from(document.querySelectorAll('.build-choice')).every(row => {
+        const bounds = row.getBoundingClientRect();
+        return row.scrollWidth <= row.clientWidth && Array.from(row.querySelectorAll('.build-asset')).every(icon => {const rect = icon.getBoundingClientRect(); return rect.left >= bounds.left && rect.right <= bounds.right;});
+      })`);
+      if (!rowsFit) {
+        throw new Error('Build rows overflow at width ' + width);
+      }
+      if (!fits) {
+        const geometry = await evaluate(
+          `Array.from(document.querySelectorAll('#plan .rune-tree')).map(tree => ({tree:tree.getBoundingClientRect().toJSON(),icons:Array.from(tree.querySelectorAll('.icon-button')).map(icon=>icon.getBoundingClientRect().toJSON())}))`,
+        );
+        await writeFile(
+          path.join(artifacts, 'rune-layout-failure.json'),
+          JSON.stringify(geometry, null, 2),
+        );
+        await writeFile(
+          path.join(artifacts, 'rune-layout-failure.png'),
+          (await main.webContents.capturePage()).toPNG(),
+        );
+        throw new Error('Companion rune tree icons overlap or overflow at width ' + width);
+      }
+    }
+    await evaluate('document.querySelector("#plan .rune-trees").scrollIntoView({block:"center"})');
+    await evaluate(
+      'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
+    );
+    await writeFile(
+      path.join(artifacts, 'companion-runes.png'),
+      (await main.webContents.capturePage()).toPNG(),
+    );
+    await evaluate('window.scrollTo(0,0)');
+    main.setSize(originalSize[0], originalSize[1]);
     await evaluate(
       'document.querySelector("#plan .build-item button").dispatchEvent(new PointerEvent("pointerover", {bubbles:true}))',
     );
@@ -401,6 +605,13 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
       await overlay.loadFile(path.join(directory, '../ui/overlay.html'));
       if (overlay.isFocusable() || overlay.isVisible()) {
         throw new Error('Overlay stole focus or became visible during the hidden test');
+      }
+      if (!overlay.isResizable()) {
+        throw new Error('Shop overlay cannot be resized');
+      }
+      overlay.setBounds({ x: 50, y: 70, width: 520, height: 600 });
+      if (overlay.getBounds().width !== 520 || overlay.getBounds().height !== 600) {
+        throw new Error('Shop overlay did not accept custom bounds');
       }
       const before = app
         .getAppMetrics()

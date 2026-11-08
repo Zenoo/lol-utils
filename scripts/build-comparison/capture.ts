@@ -1,9 +1,16 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { casesSchema, parseOpgg } from './model.js';
+import { manifestSchema } from '../../src/core/schema.js';
+import { parseOpggRunes } from './runes.js';
 
 const requestedPatch =
-  process.argv.find((arg) => /^--patch=/.test(arg))?.slice('--patch='.length) ?? '16.21';
+  process.argv.find((arg) => /^--patch=/.test(arg))?.slice('--patch='.length) ??
+  manifestSchema
+    .parse(JSON.parse(await readFile('data/manifest.json', 'utf8')))
+    .version.split('.')
+    .slice(0, 2)
+    .join('.');
 if (!/^\d+\.\d+$/.test(requestedPatch)) {
   throw new Error('Use --patch=major.minor');
 }
@@ -19,6 +26,7 @@ const roles: Record<string, string> = {
 };
 const references = [];
 const failures = [];
+const runeReferences = [];
 await mkdir('artifacts/build-comparison', { recursive: true });
 for (const entry of cases) {
   const url = `https://op.gg/lol/champions/${entry.champion.toLowerCase()}/build/${roles[entry.role]}?patch=${requestedPatch}&region=global&tier=emerald_plus&type=ranked`;
@@ -32,6 +40,17 @@ for (const entry of cases) {
     if (parsed.patch !== requestedPatch) {
       throw new Error(`Requested ${requestedPatch}, received ${parsed.patch}`);
     }
+    runeReferences.push({
+      champion: entry.champion,
+      role: entry.role,
+      provider: 'op.gg',
+      url,
+      patch: parsed.patch,
+      observedAt: new Date().toISOString(),
+      population: 'Global Emerald+, ranked solo/duo; first displayed rune page',
+      sourceSha256: createHash('sha256').update(html).digest('hex'),
+      selectedPerkIds: parseOpggRunes(html),
+    });
     references.push({
       ...entry,
       provider: 'op.gg',
@@ -51,6 +70,10 @@ for (const entry of cases) {
   }
   await new Promise((resolve) => setTimeout(resolve, 400));
 }
+await writeFile(
+  'artifacts/build-comparison/captured-runes.json',
+  JSON.stringify(runeReferences, null, 2) + '\n',
+);
 await writeFile(
   'artifacts/build-comparison/captured.json',
   JSON.stringify(references, null, 2) + '\n',

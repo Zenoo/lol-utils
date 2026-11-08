@@ -72,3 +72,35 @@ test('bonus attack damage keeps its meaning instead of being presented as total 
   assert.match(tooltip, /% bonus AD/);
   assert.ok(!tooltip.includes('% total AD'));
 });
+
+test('every archived champion ability resolves its tokens and nested localization branches', async () => {
+  for (const champion of catalog.champions) {
+    const raw: unknown = JSON.parse(
+      await readFile(`data/raw/champions/${champion.alias}.game.json`, 'utf8'),
+    );
+    for (const spell of championTooltips(champion, raw).spells) {
+      assert.doesNotMatch(
+        spell.tooltip,
+        /unresolved formula|\{\{|\}\}|\bNaN\b|\bInfinity\b/,
+        `${champion.alias} ${spell.name}`,
+      );
+    }
+  }
+});
+
+test('health scaling, ammo, precision and conditional forms preserve their source values', async () => {
+  const tooltip = async (alias: string, slot: number) => {
+    const champion = required(catalog.champions.find((entry) => entry.alias === alias));
+    const raw: unknown = JSON.parse(
+      await readFile(`data/raw/champions/${alias}.game.json`, 'utf8'),
+    );
+
+    return championTooltips(champion, raw).spells[slot].tooltip;
+  };
+  assert.match(await tooltip('Aatrox', 2), /1.3% bonus maximum health/);
+  assert.match(await tooltip('Teemo', 3), /35\/30\/25/);
+  assert.match(await tooltip('Rumble', 1), /1.5/);
+  assert.match(await tooltip('Kaisa', 0), /normal.*conditional form/);
+  assert.match(await tooltip('Gangplank', 0), /3\/4\/5\/6\/7 bonus gold/);
+  assert.match(await tooltip('Bard', 1), /current active shrines \/ 3/);
+});

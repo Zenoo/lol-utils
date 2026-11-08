@@ -57,6 +57,12 @@ export const championSourceSchema = z
 export const championSchema = z
   .object({
     progression: progressionSchema.optional(),
+    mechanics: z.object({
+      attackSpeedScaling: z.boolean(),
+      criticalScaling: z.boolean(),
+      innateArmorPenetration: z.number(),
+      innateArmorShred: z.number(),
+    }),
     id: z.number().int(),
     alias: z.string(),
     name: z.string(),
@@ -155,7 +161,22 @@ export const summonerSchema = z
     image: imageSchema,
   })
   .passthrough();
+export const hudLayoutSchema = z.object({
+  referenceWidth: z.number().positive(),
+  referenceHeight: z.number().positive(),
+  anchor: z.tuple([z.number(), z.number()]),
+  slots: z
+    .array(
+      z.object({
+        key: z.enum(['Q', 'W', 'E', 'R']),
+        position: z.tuple([z.number(), z.number()]),
+        size: z.tuple([z.number().positive(), z.number().positive()]),
+      }),
+    )
+    .length(4),
+});
 export const catalogSchema = z.object({
+  hud: hudLayoutSchema,
   version: z.string(),
   patch: z.string(),
   locale: z.string(),
@@ -242,6 +263,7 @@ export const selectionSchema = z
   .object({
     cellId: z.number(),
     championId: z.number(),
+    championPickIntent: z.number().int().nonnegative().optional(),
     assignedPosition: z.string().optional(),
   })
   .passthrough();
@@ -277,7 +299,9 @@ export const championIndexSchema = z.object({
 export const championDetailSchema = z.object({
   data: z.record(
     z.string(),
-    championSchema.omit({ source: true, alias: true }).extend({ id: z.string(), key: z.string() }),
+    championSchema
+      .omit({ source: true, alias: true, mechanics: true })
+      .extend({ id: z.string(), key: z.string() }),
   ),
 });
 export const itemsFileSchema = z.object({

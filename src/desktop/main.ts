@@ -10,8 +10,10 @@ import { LeagueHud, skillBounds } from './hud.js';
 import { windowsForeground, windowsKeyDown } from './windows.js';
 import { ShopShortcut, shortcutDown, registerShopShortcut } from './shop-shortcut.js';
 import { createOverlayWindow } from './overlay-window.js';
+import { loadShopLayout, relativeShopLayout, shopBounds } from './shop-layout.js';
 import type { AppData, Plan, OverlayState, Settings } from '../core/types.js';
 import { required } from '../core/assert.js';
+import { roles } from '../core/builds.js';
 
 // Smoke tests use an isolated profile and fail on errors instead of opening an unattended dialog.
 const smokeMode = process.argv.includes('--smoke-test');
@@ -46,6 +48,13 @@ async function start() {
   const root = app.getAppPath();
   const here = path.dirname(fileURLToPath(import.meta.url));
   const settingsFile = path.join(app.getPath('userData'), 'settings.json');
+  const layoutFile = path.join(app.getPath('userData'), 'shop-layout.json');
+  let shopLayout = await readFile(layoutFile, 'utf8')
+    .then((text) => loadShopLayout(JSON.parse(text)))
+    .catch(() => undefined);
+  let placingOverlay = false;
+  let shopViewport: Electron.Rectangle | undefined;
+  let layoutSave: ReturnType<typeof setTimeout> | undefined;
   let settings: Settings = await readFile(settingsFile, 'utf8')
     .then((t) => loadSettings(JSON.parse(t)))
     .catch(() => ({ ...defaults }));
@@ -145,6 +154,22 @@ async function start() {
         window = createOverlayWindow(here, kind);
         overlays[kind] = window;
         secure(window);
+        if (kind === 'shop') {
+          const rememberLayout = () => {
+            if (placingOverlay || !shopViewport || !window || window.isDestroyed()) {
+              return;
+            }
+            shopLayout = relativeShopLayout(window.getBounds(), shopViewport);
+            clearTimeout(layoutSave);
+            layoutSave = setTimeout(() => {
+              void mkdir(path.dirname(layoutFile), { recursive: true })
+                .then(() => writeFile(layoutFile, JSON.stringify(shopLayout)))
+                .catch((error: unknown) => console.error('Could not save shop layout', error));
+            }, 300);
+          };
+          window.on('move', rememberLayout);
+          window.on('resize', rememberLayout);
+        }
         window.webContents.on('did-finish-load', () => {
           lastOverlayPayload[kind] = '';
           renderOverlay();
@@ -167,14 +192,18 @@ async function start() {
         kind === 'skill'
           ? screen.screenToDipRect(
               null,
-              skillBounds(rect, required(latestOverlay.skill.key), hud.scale),
+              skillBounds(
+                rect,
+                required(latestOverlay.skill.key),
+                hud.scale,
+                catalog.hud,
+                settings,
+              ),
             )
-          : {
-              x: Math.round(dip.x + 24),
-              y: Math.round(dip.y + (dip.height - Math.min(480, dip.height)) / 2),
-              width: Math.min(390, dip.width),
-              height: Math.min(480, dip.height),
-            };
+          : shopBounds(dip, shopLayout);
+      if (kind === 'shop') {
+        shopViewport = dip;
+      }
       const old = window.getBounds();
       if (
         old.x !== bounds.x ||
@@ -182,7 +211,12 @@ async function start() {
         old.width !== bounds.width ||
         old.height !== bounds.height
       ) {
-        window.setBounds(bounds, false);
+        placingOverlay = true;
+        try {
+          window.setBounds(bounds, false);
+        } finally {
+          placingOverlay = false;
+        }
       }
       const payload = {
         skill: kind === 'skill' ? latestOverlay.skill : { key: null, reason: '' },
@@ -373,16 +407,20 @@ async function start() {
     }
     throw new Error('Invalid detail kind');
   });
-  ipcMain.handle('plan', (event, id) => {
+  ipcMain.handle('plan', (event, id, requestedRole) => {
     authorize(event);
     const champ = catalog.champions.find((c) => c.id === id);
     if (!champ) {
       throw new Error('Unknown champion');
     }
+    if (requestedRole !== undefined && !roles.includes(requestedRole)) {
+      throw new Error('Unknown role');
+    }
     const role =
-      service.state().selectedId === champ.id
+      requestedRole ??
+      (service.state().selectedId === champ.id
         ? service.state().role?.toUpperCase() || settings.role
-        : settings.role;
+        : settings.role);
     const game = service.planningGame(champ.id);
 
     return {
@@ -432,6 +470,17 @@ async function start() {
     });
 
     return result.filePaths[0];
+  });
+  ipcMain.handle('source-builds', async (event, id, role, refresh) => {
+    authorize(event);
+
+    return service.sourceBuilds.load(id, role, refresh === true);
+  });
+  ipcMain.handle('import-source-build', async (event, id, parts) => {
+    authorize(event);
+    await service.importSourceBuild(id, parts);
+
+    return service.state();
   });
   ipcMain.handle('import', async (event) => {
     authorize(event);

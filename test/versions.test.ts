@@ -1,6 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { patchWarning, publishedVersions, shortVersion } from '../src/core/versions.js';
+import {
+  patchWarning,
+  publishedVersions,
+  shortVersion,
+  publicPatch,
+} from '../src/core/versions.js';
+
+test('public patch labels distinguish the Riot year label from internal CDN versions', () => {
+  assert.equal(publicPatch('16.22.1'), '26.22');
+  assert.equal(publicPatch('16.22'), '26.22');
+  assert.equal(publicPatch('15.1.1'), '25.1');
+  assert.equal(publicPatch('14.24.1'), '14.24');
+  assert.equal(publicPatch('16.22.123.456'), '26.22');
+  assert.equal(publicPatch('unknown'), 'unknown');
+});
 
 test('patch messages use published revisions instead of long client build strings', () => {
   assert.equal(shortVersion('16.21.2'), '16.21.2');

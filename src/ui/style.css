@@ -51,8 +51,330 @@ nav {
   gap: 7px;
 }
 button,
-input {
+input,
+select {
   font: inherit;
+}
+#source-parts {
+  display: flex;
+  gap: 16px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  align-items: center;
+}
+#source-parts legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.build-toolbar,
+.build-import-bar,
+.role-picker,
+.source-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.build-toolbar {
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.build-hero {
+  display: grid;
+  grid-template-columns: 1fr minmax(240px, 1fr);
+  gap: 24px;
+  align-items: center;
+}
+.build-hero h2 {
+  font-size: 24px;
+  margin: 4px 0 8px;
+}
+.build-hero .eyebrow {
+  margin-bottom: 8px;
+}
+.build-hero p {
+  margin: 8px 0;
+  font-size: 12px;
+}
+.build-toolbar h3 {
+  margin: 0;
+}
+.role-picker {
+  gap: 6px;
+}
+.role-picker button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: transparent;
+  border-color: transparent;
+  font-size: 12px;
+}
+.role-picker img {
+  width: 24px;
+  height: 24px;
+}
+.role-picker button[aria-pressed='true'],
+.source-picker button[aria-pressed='true'] {
+  color: #ffe0a1;
+  background: #302c24;
+  border-color: #b89b66;
+}
+.build-list-head,
+.build-choice {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto auto auto;
+  align-items: center;
+  gap: 16px;
+}
+.build-list-head {
+  padding: 10px 12px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #8fa0b7;
+}
+.build-list-head > :nth-child(2) {
+  width: 212px;
+}
+.build-list-head > :nth-child(3) {
+  width: 147px;
+}
+.build-list-head > :nth-child(4) {
+  width: 66px;
+}
+.build-choices {
+  display: grid;
+  gap: 5px;
+}
+.build-choice {
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  padding: 12px;
+  background: #101b2a;
+  border: 1px solid #243245;
+  border-radius: 7px;
+}
+.build-choice:hover {
+  border-color: #b89b66;
+}
+.build-choice[data-selected='true'] {
+  background: #222c37;
+  border-color: #d3b16d;
+  box-shadow: inset 3px 0 #d3b16d;
+}
+.build-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: inherit;
+}
+.build-select:focus-visible {
+  outline-offset: -3px;
+}
+.build-choice > span {
+  position: relative;
+  pointer-events: none;
+}
+.build-choice .build-provider,
+.build-choice .build-asset {
+  pointer-events: auto;
+}
+.build-provider {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.build-provider:focus-visible,
+.build-asset:focus-visible {
+  outline: 2px solid #e0bd79;
+  outline-offset: 2px;
+}
+.build-source {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.build-source > span {
+  min-width: 0;
+}
+.build-source strong {
+  display: block;
+  font-size: 13px;
+}
+.build-source small {
+  margin: 3px 0 0;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-icon {
+  flex: 0 0 28px;
+  border-radius: 5px;
+  object-fit: contain;
+}
+.build-items,
+.build-runes,
+.build-summoners {
+  display: flex;
+  align-items: center;
+}
+.build-items {
+  gap: 4px;
+}
+.build-runes {
+  gap: 3px;
+}
+.build-summoners {
+  gap: 6px;
+}
+.build-asset {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  background: #19283a;
+  border: 1px solid #3b4c60;
+  border-radius: 4px;
+  flex-shrink: 0;
+  color: #8fa0b7;
+  font-size: 10px;
+  overflow: hidden;
+  padding: 0;
+  cursor: help;
+}
+.build-asset img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.build-asset.unspecified {
+  border-style: dashed;
+  background: transparent;
+}
+.build-runes .build-asset {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+}
+.build-summoners .build-asset {
+  width: 30px;
+  height: 30px;
+}
+.selected-build-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.selected-build-meta > span {
+  color: #8fa0b7;
+}
+.build-import-bar {
+  justify-content: space-between;
+}
+.build-import-bar label {
+  font-size: 13px;
+  white-space: nowrap;
+}
+.build-import-bar .primary {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.build-note {
+  color: #8fa0b7;
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 10px 0 14px;
+}
+#build-loading {
+  font-size: 11px;
+}
+.source-errors {
+  font-size: 12px;
+}
+.auto-import-setting {
+  border: 1px solid #2b3c52;
+  border-radius: 8px;
+  padding: 18px;
+  margin: 24px 0;
+}
+.source-picker {
+  margin-top: 16px;
+  gap: 8px;
+}
+.source-picker button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  font-size: 12px;
+}
+@media (max-width: 1100px) {
+  .build-choice,
+  .build-list-head {
+    gap: 10px;
+    grid-template-columns: minmax(90px, 1fr) auto auto auto;
+  }
+  .build-items {
+    gap: 3px;
+  }
+  .build-asset {
+    width: 28px;
+    height: 28px;
+  }
+  .build-runes {
+    gap: 2px;
+  }
+  .build-runes .build-asset {
+    width: 18px;
+    height: 18px;
+  }
+  .build-summoners {
+    gap: 4px;
+  }
+  .build-summoners .build-asset {
+    width: 24px;
+    height: 24px;
+  }
+  .build-source {
+    gap: 6px;
+  }
+  .build-source .source-icon {
+    width: 24px;
+    height: 24px;
+    flex-basis: 24px;
+  }
+  .build-list-head > :nth-child(2) {
+    width: 183px;
+  }
+  .build-list-head > :nth-child(3) {
+    width: 118px;
+  }
+  .build-list-head > :nth-child(4) {
+    width: 52px;
+  }
+  .role-picker button {
+    padding: 6px;
+  }
 }
 button {
   cursor: pointer;
@@ -734,20 +1056,45 @@ summary {
   height: 56px;
 }
 #plan .rune-trees {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
 }
 #plan .rune-tree {
   padding: 8px;
+  margin: 0;
 }
 #plan .rune-slot {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 34px;
+  justify-content: center;
   gap: 5px;
+  padding-block: 12px;
+}
+#plan .rune-choice {
+  width: 34px;
 }
 #plan .rune-choice small {
   display: none;
 }
 #plan .rune-choice .icon-button {
-  width: 36px;
-  height: 36px;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  padding: 0;
+}
+#plan .rune-shards {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+.columns > .panel {
+  min-width: 0;
 }
 
 .build-progression .build-item {

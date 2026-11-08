@@ -1,0 +1,3 @@
+`hud-player-frame.json` retains the four `AbilityN_IconLoc` entries from Riot's player-frame layout for Data Dragon 16.22.1 / public patch 26.22, accessed through [CommunityDragon](https://raw.communitydragon.org/16.22/game/clientstates/gameplay/ux/lol/playerframe/uibase.cdtb.bin.json). The production data pipeline archives the full source and its checksum, then extracts the same rectangles into the catalog.
+
+The geometry regression uses these independently captured source rectangles, including their reference resolution and anchors. It does not establish alignment with pixels in a running match.

@@ -6,6 +6,15 @@ import { catalog } from './fixtures.js';
 
 test('catalog validation rejects incomplete, duplicate, non-finite, and disconnected rune data', () => {
   assert.deepEqual(validateCatalog(catalog), catalog);
+  assert.ok(catalog.champions.every((champion) => champion.mechanics));
+  assert.throws(() =>
+    validateCatalog({
+      ...catalog,
+      champions: catalog.champions.map((champion, index) =>
+        index === 0 ? { ...champion, mechanics: undefined } : champion,
+      ),
+    }),
+  );
   assert.throws(() => validateCatalog({ ...catalog, champions: [] }));
   assert.throws(() =>
     validateCatalog({ ...catalog, champions: [...catalog.champions, catalog.champions[0]] }),

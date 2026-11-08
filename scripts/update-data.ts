@@ -9,6 +9,8 @@ import { required } from '../src/core/assert.js';
 import type { Champion } from '../src/core/types.js';
 import { publishData, recoverData, removeDataStage } from './data-storage.js';
 import { latestDataVersion } from './check-data-version.js';
+import { championMechanics } from '../src/core/champion-mechanics.js';
+import { extractHudLayout } from '../src/core/hud-layout.js';
 import {
   championIndexSchema,
   championDetailSchema,
@@ -109,6 +111,7 @@ export async function updateData({ force = false } = {}) {
       perks,
       perkStyles,
       gameItems,
+      hudFrame,
     ] = await all([
       get(`${dd}/champion.json`, 'champions.json', championIndexSchema),
       get(`${dd}/item.json`, 'items.json', itemsFileSchema),
@@ -128,6 +131,11 @@ export async function updateData({ force = false } = {}) {
         'game-items.json',
         z.record(z.string(), z.unknown()),
       ),
+      get(
+        `https://raw.communitydragon.org/${patch}/game/clientstates/gameplay/ux/lol/playerframe/uibase.cdtb.bin.json`,
+        'hud-player-frame.json',
+        z.record(z.string(), z.unknown()),
+      ),
     ]);
     const champions: Champion[] = [];
     await pool(Object.values(index.data), 6, async (c) => {
@@ -144,18 +152,21 @@ export async function updateData({ force = false } = {}) {
       if (source.id !== Number(c.key)) {
         throw new Error(`Champion source mismatch: ${c.id}`);
       }
-      champions.push({
+      const base = {
         ...d,
         alias: d.id,
         id: Number(d.key),
         source,
         progression: extractSkillProgression(d.spells, gameData),
-      });
+      };
+      const champion: Champion = { ...base, mechanics: championMechanics(base, gameData) };
+      champions.push(champion);
     });
     champions.sort((a, b) => a.id - b.id);
     const cdIndex = new Map(cdItems.map((i) => [i.id, i]));
     const itemRules = extractItemRules(gameItems);
     const catalog = validateCatalog({
+      hud: extractHudLayout(hudFrame),
       version,
       patch,
       locale: 'en_US',

@@ -107,11 +107,7 @@ test('development comparisons and third-party snapshots stay outside production 
   const files = await readdir('src', { recursive: true });
   for (const file of files.filter((file) => /\.(?:ts|cts)$/.test(file))) {
     const source = await readFile(`src/${file}`, 'utf8');
-    assert.doesNotMatch(
-      source,
-      /build-comparison|references\.json|op\.gg|u\.gg|mobafire\.com|lolalytics\.com|blitz\.gg/,
-      file,
-    );
+    assert.doesNotMatch(source, /build-comparison|references\.json/, file);
   }
   const pkg = JSON.parse(await readFile('package.json', 'utf8')) as { build: { files: string[] } };
   assert.ok(pkg.build.files.includes('build/src/**/*'));
@@ -119,5 +115,37 @@ test('development comparisons and third-party snapshots stay outside production 
     pkg.build.files.every(
       (pattern) => !pattern.includes('scripts') && !pattern.includes('build-comparison'),
     ),
+  );
+});
+
+test('archived ability scalings affect marginal item value without treating a spell as a basic attack', () => {
+  const garen = required(catalog.champions.find((champion) => champion.alias === 'Garen'));
+  assert.equal(garen.mechanics?.attackSpeedScaling, true);
+  assert.equal(garen.mechanics?.criticalScaling, true);
+  assert.equal(garen.mechanics?.innateArmorShred, 0.25);
+  assert.ok(profile(garen).attacks < 0.4);
+  const dancer = required(engine.items.get(3046));
+  const noScaling = {
+    ...garen,
+    mechanics: { ...required(garen.mechanics), attackSpeedScaling: false, criticalScaling: false },
+  };
+  assert.ok(engine.scoreItem(dancer, garen).score > engine.scoreItem(dancer, noScaling).score);
+  const cleaver = required(engine.items.get(3071));
+  const noShred = { ...garen, mechanics: { ...required(garen.mechanics), innateArmorShred: 0 } };
+  assert.ok(engine.scoreItem(cleaver, garen).score < engine.scoreItem(cleaver, noShred).score);
+});
+
+test('persistent on-hit damage scales with owned AP and repeat procs value existing on-hit effects', () => {
+  const kayle = required(catalog.champions.find((champion) => champion.alias === 'Kayle'));
+  const context = engine.context(kayle, undefined, 'TOP');
+  const tooth = required(engine.items.get(3115));
+  assert.ok(
+    engine.scoreItem(tooth, kayle, undefined, context, { abilityPower: 200 }).score >
+      engine.scoreItem(tooth, kayle, undefined, context, { abilityPower: 0 }).score,
+  );
+  const repeat = required(engine.items.get(2510));
+  assert.ok(
+    engine.scoreItem(repeat, kayle, undefined, context, { onHitItems: 1 }).score >
+      engine.scoreItem(repeat, kayle, undefined, context, { onHitItems: 0 }).score,
   );
 });

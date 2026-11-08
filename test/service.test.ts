@@ -10,6 +10,70 @@ import { draftGame } from '../src/core/draft.js';
 import { required } from '../src/core/assert.js';
 
 type ApiClient = Pick<LocalApi, 'request' | 'close'>;
+test('champion intent previews a plan without importing and follows hover, lock and cancellation', async () => {
+  const session = completeSession();
+  const local = required(session.myTeam[0]);
+  const shen = local.championId;
+  const annie = required(catalog.champions.find((c) => c.alias === 'Annie')).id;
+  local.championId = 0;
+  local.championPickIntent = shen;
+  let autoImport = true;
+  const requests: string[] = [];
+  const client: ApiClient = {
+    request: async (_method, endpoint) => {
+      requests.push(endpoint);
+      if (endpoint === '/lol-patch/v1/game-version') {
+        return catalog.version;
+      }
+      if (endpoint === '/lol-gameflow/v1/gameflow-phase') {
+        return 'ChampSelect';
+      }
+      if (endpoint === '/lol-champ-select/v1/session') {
+        return structuredClone(session);
+      }
+      throw new Error(`Unexpected import request during preview: ${endpoint}`);
+    },
+    close: () => {},
+  };
+  const service = new CompanionService(
+    catalog,
+    () => ({ ...defaults, autoImport }),
+    () => {},
+    () => {},
+    {
+      sourceFetch: async () => new Response('Unavailable in tests', { status: 503 }),
+      live: {
+        request: async () => {
+          throw new Error('No game');
+        },
+        close: () => {},
+      },
+      connect: async () => client,
+    },
+  );
+  try {
+    service.start();
+    await until(() => service.state().selectedId === shen);
+    assert.equal(service.state().selectionPreview, true);
+    assert.ok(
+      service.engine.buildPlan(required(catalog.champions.find((c) => c.id === shen))).length,
+    );
+    await assert.rejects(service.importSelected(), /No known champion selected/);
+    assert.ok(!requests.includes('/lol-summoner/v1/current-summoner'));
+    local.championPickIntent = annie;
+    await until(() => service.state().selectedId === annie);
+    assert.equal(service.state().selectionPreview, true);
+    autoImport = false;
+    local.championId = shen;
+    await until(() => service.state().selectedId === shen && !service.state().selectionPreview);
+    local.championId = 0;
+    local.championPickIntent = 0;
+    await until(() => service.state().selectedId === null);
+  } finally {
+    service.stop();
+  }
+});
+
 async function until(condition: () => boolean) {
   const deadline = Date.now() + 4000;
   while (!condition()) {
@@ -29,6 +93,7 @@ test('an unexpected discovery failure clears an already visible overlay and stal
     () => {},
     (value) => overlays.push(value),
     {
+      sourceFetch: async () => new Response('Unavailable in tests', { status: 503 }),
       live: { request: async () => game(), close: () => {} },
       connect: async () => {
         if (++connects > 1) {
@@ -59,6 +124,7 @@ test('a mismatched patch warns the app while live skill and item guidance contin
     () => {},
     (value) => overlays.push(value),
     {
+      sourceFetch: async () => new Response('Unavailable in tests', { status: 503 }),
       live: { request: async () => game(), close: () => {} },
       connect: async () => client,
     },
@@ -84,6 +150,7 @@ test('an unknown patch with no League client still provides live guidance and an
     () => {},
     () => {},
     {
+      sourceFetch: async () => new Response('Unavailable in tests', { status: 503 }),
       live: { request: async () => game(), close: () => {} },
       connect: async () => undefined,
     },
@@ -149,6 +216,7 @@ test('both mismatched and unknown patches allow runes, summoners and item-set im
       () => {},
       () => {},
       {
+        sourceFetch: async () => new Response('Unavailable in tests', { status: 503 }),
         live: {
           request: async () => {
             throw new Error('No game');
@@ -215,6 +283,7 @@ test('a champion switch immediately before import cancels all writes', async () 
     () => {},
     () => {},
     {
+      sourceFetch: async () => new Response('Unavailable in tests', { status: 503 }),
       live: {
         request: async () => {
           throw new Error('No game');
@@ -242,7 +311,7 @@ test(
   },
 );
 
-test('only the final pick refreshes the item set using both complete teams, without reimporting runes or spells', async () => {
+test('draft changes do not import generated builds; explicit imports still use both teams', async () => {
   const full = completeSession();
   const session = structuredClone(full);
   session.theirTeam[3].championId = 0;
@@ -292,6 +361,7 @@ test('only the final pick refreshes the item set using both complete teams, with
     () => {},
     () => {},
     {
+      sourceFetch: async () => new Response('Unavailable in tests', { status: 503 }),
       live: {
         close: () => {},
         request: async () => {
@@ -304,15 +374,18 @@ test('only the final pick refreshes the item set using both complete teams, with
   const itemWrites = () => writes.filter((w) => w.endpoint.includes('/lol-item-sets/'));
   try {
     service.start();
-    await until(() => itemWrites().length === 1);
+    await until(() => service.state().selectedId === session.myTeam[0]?.championId);
+    assert.equal(writes.length, 0, 'champion selection waits for a source choice');
     session.theirTeam[3].championId = full.theirTeam[3].championId;
     const previousReads = reads;
     await until(() => reads > previousReads);
-    assert.equal(itemWrites().length, 1, 'no refresh for an intermediate pick');
+    assert.equal(writes.length, 0, 'no import for an intermediate pick');
     session.theirTeam[4].championId = full.theirTeam[4].championId;
-    await until(() => itemWrites().length === 2);
-    assert.equal(writes.length, 4, 'only items were reimported');
-    const saved = itemWrites()[1].body as {
+    await until(() => Boolean(service.state().draftKey));
+    assert.equal(writes.length, 0, 'complete draft still waits for user choice');
+    await service.importSelected();
+    assert.equal(writes.length, 3, 'explicit import applies the plan');
+    const saved = itemWrites()[0].body as {
       itemSets: { blocks: { type: string; items: { id: string }[] }[] }[];
     };
     const ids = saved.itemSets[0].blocks
@@ -324,7 +397,7 @@ test('only the final pick refreshes the item set using both complete teams, with
     assert.ok(service.state().draftKey);
     const finalReads = reads;
     await until(() => reads > finalReads);
-    assert.equal(itemWrites().length, 2, 'unchanged complete roster is not imported again');
+    assert.equal(itemWrites().length, 1, 'unchanged complete roster is not imported again');
   } finally {
     service.stop();
   }
@@ -338,6 +411,7 @@ test('a closed League client still warns about outdated bundled data using the p
     () => {},
     () => {},
     {
+      sourceFetch: async () => new Response('Unavailable in tests', { status: 503 }),
       live: {
         request: async () => {
           throw new Error('No game');

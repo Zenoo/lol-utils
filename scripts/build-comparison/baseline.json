@@ -1,23 +1,37 @@
 {
-  "dataVersion": "16.21.1",
-  "engineSha256": "0817187f157197fb7d2588db8dafa09336b95bd3015077cc4ce8c8ee7e5254ac",
-  "generatedAt": "2026-11-05T22:07:13.432Z",
+  "dataVersion": "16.22.1",
+  "catalogSha256": "4a39f6aaecc42e630546a2df9c2e24b5a84feb3f506b141a39ecd7a15e095840",
+  "engineSha256": "b20a86ad9696c0922a43918913415373d76537808061ee81f8e4d30af7487918",
+  "generatedAt": "2026-11-07T22:01:20.447Z",
+  "referencesSha256": "d6f7a3c0d8242325ceabe097e2edb842b4d578e77f1550622ffba38d863b4a27",
   "mode": "champion-only; no LiveGame passed",
   "summary": {
     "all": {
       "cases": 12,
-      "coreRecall": 0.25,
-      "buildRecall": 0.2777777777777778
+      "baselineCoreRecall": 0,
+      "baselineOrderedRecall": 0,
+      "orderedRecall": 0.6944444444444445,
+      "baselineBuildRecall": 0,
+      "coreRecall": 0.75,
+      "buildRecall": 0.8333333333333334
     },
     "development": {
       "cases": 6,
-      "coreRecall": 0.2222222222222222,
-      "buildRecall": 0.2222222222222222
+      "baselineCoreRecall": 0,
+      "baselineOrderedRecall": 0,
+      "orderedRecall": 0.611111111111111,
+      "baselineBuildRecall": 0,
+      "coreRecall": 0.7222222222222222,
+      "buildRecall": 0.8333333333333334
     },
     "validation": {
       "cases": 6,
-      "coreRecall": 0.27777777777777773,
-      "buildRecall": 0.3333333333333333
+      "baselineCoreRecall": 0,
+      "baselineOrderedRecall": 0,
+      "orderedRecall": 0.7777777777777777,
+      "baselineBuildRecall": 0,
+      "coreRecall": 0.7777777777777777,
+      "buildRecall": 0.8333333333333334
     }
   },
   "rows": [
@@ -25,15 +39,20 @@
       "champion": "Shen",
       "role": "TOP",
       "group": "development",
-      "ids": [2510, 3047, 3748, 3091, 3115, 3046],
+      "ids": [3748, 3047, 2510, 6664, 3053, 3190],
+      "baseline": {
+        "ids": [],
+        "coreRecall": null,
+        "buildRecall": null,
+        "orderedRecall": null
+      },
       "items": [
         {
-          "name": "Dusk and Dawn",
+          "name": "Titanic Hydra",
           "reasons": [
             "Health supports durability and health-scaling effects",
-            "Ability haste gives more frequent ability casts",
-            "Spellblade follows abilities that empower attacks",
-            "Repeats on-hit effects from empowered attacks",
+            "Attack damage fits physical damage and basic attacks",
+            "Health-scaling attack damage and cleave for melee waveclear",
             "On-hit effect fits attack frequency"
           ]
         },
@@ -46,97 +65,118 @@
           ]
         },
         {
-          "name": "Titanic Hydra",
+          "name": "Dusk and Dawn",
+          "reasons": [
+            "Ability haste gives more frequent ability casts",
+            "Ability power fits the magic-damage ability profile",
+            "Spellblade follows abilities that empower attacks",
+            "Repeats on-hit effects from empowered attacks",
+            "On-hit effect fits attack frequency"
+          ]
+        },
+        {
+          "name": "Hollow Radiance",
+          "reasons": [
+            "Magic resistance reduces incoming magic damage",
+            "Health supports durability and health-scaling effects",
+            "Nearby burn adds sustained damage and melee waveclear"
+          ]
+        },
+        {
+          "name": "Sterak's Gage",
           "reasons": [
             "Health supports durability and health-scaling effects",
             "Attack damage fits physical damage and basic attacks",
-            "Health-scaling attack damage and cleave for melee waveclear",
-            "On-hit effect fits attack frequency"
-          ]
-        },
-        {
-          "name": "Wit's End",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Magic resistance reduces incoming magic damage",
             "Tenacity against crowd control in enemy kits",
-            "On-hit effect fits attack frequency"
+            "Bonus health increases the low-health survival shield"
           ]
         },
         {
-          "name": "Nashor's Tooth",
+          "name": "Locket of the Iron Solari",
           "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Ability power fits the magic-damage ability profile",
-            "On-hit effect fits attack frequency"
-          ]
-        },
-        {
-          "name": "Phantom Dancer",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Critical strikes improve physical basic attacks"
+            "Armor reduces incoming physical damage",
+            "Magic resistance reduces incoming magic damage"
           ]
         }
       ],
       "sources": [
         {
           "provider": "op.gg",
-          "url": "https://op.gg/lol/champions/shen/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked",
-          "patch": "16.21",
+          "url": "https://op.gg/lol/champions/shen/build/top?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+          "patch": "16.22",
           "expected": [3748, 2510, 3075],
           "coreRecall": 0.6666666666666666,
           "buildRecall": 0.6666666666666666,
-          "orderedRecall": 0,
-          "firstItem": false,
+          "orderedRecall": 0.6666666666666666,
+          "firstItem": true,
           "boots": true,
-          "core": [2510, 3748, 3091]
+          "core": [3748, 2510, 6664]
         },
         {
           "provider": "lolalytics.com",
           "url": "https://lolalytics.com/lol/shen/build/",
-          "patch": "16.21",
+          "patch": "16.22",
           "expected": [3748, 2510, 2524],
           "coreRecall": 0.6666666666666666,
           "buildRecall": 0.6666666666666666,
-          "orderedRecall": 0,
-          "firstItem": false,
+          "orderedRecall": 0.6666666666666666,
+          "firstItem": true,
           "boots": true,
-          "core": [2510, 3748, 3091]
+          "core": [3748, 2510, 6664]
         }
       ],
       "excludedSources": [
-        "https://www.mobafire.com/league-of-legends/build/shen-cooking-26-20-647518"
+        "https://op.gg/lol/champions/shen/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+        "https://www.mobafire.com/league-of-legends/build/shen-cooking-26-20-647518",
+        "https://lolalytics.com/lol/shen/build/"
       ],
       "coreRecall": 0.6666666666666666,
       "buildRecall": 0.6666666666666666,
-      "orderedRecall": 0
+      "orderedRecall": 0.6666666666666666
     },
     {
       "champion": "Annie",
       "role": "MIDDLE",
       "group": "development",
-      "ids": [4629, 3158, 3118, 3089, 6655, 3165],
+      "ids": [3118, 3020, 4645, 4646, 3089, 4629],
+      "baseline": {
+        "ids": [],
+        "coreRecall": null,
+        "buildRecall": null,
+        "orderedRecall": null
+      },
       "items": [
-        {
-          "name": "Cosmic Drive",
-          "reasons": [
-            "Ability haste gives more frequent ability casts",
-            "Ability power fits the magic-damage ability profile"
-          ]
-        },
-        {
-          "name": "Ionian Boots of Lucidity",
-          "reasons": [
-            "Ability haste gives more frequent ability casts",
-            "Movement speed helps positioning and reaching targets"
-          ]
-        },
         {
           "name": "Malignance",
           "reasons": [
             "Ability power fits the magic-damage ability profile",
-            "Ability haste gives more frequent ability casts"
+            "Ability haste gives more frequent ability casts",
+            "Ultimate damage benefits from ultimate haste and the damage zone"
+          ]
+        },
+        {
+          "name": "Sorcerer's Shoes",
+          "reasons": [
+            "Magic penetration improves damage against magic resistance",
+            "Movement speed helps positioning and reaching targets",
+            "Penetration against estimated magic resistance"
+          ]
+        },
+        {
+          "name": "Shadowflame",
+          "reasons": [
+            "Ability power fits the magic-damage ability profile",
+            "Magic penetration improves damage against magic resistance",
+            "Penetration against estimated magic resistance",
+            "Low-health damage amplification supports magic burst"
+          ]
+        },
+        {
+          "name": "Stormsurge",
+          "reasons": [
+            "Ability power fits the magic-damage ability profile",
+            "Magic penetration improves damage against magic resistance",
+            "Penetration against estimated magic resistance"
           ]
         },
         {
@@ -144,14 +184,7 @@
           "reasons": ["Ability power fits the magic-damage ability profile"]
         },
         {
-          "name": "Luden's Echo",
-          "reasons": [
-            "Ability power fits the magic-damage ability profile",
-            "Ability haste gives more frequent ability casts"
-          ]
-        },
-        {
-          "name": "Morellonomicon",
+          "name": "Cosmic Drive",
           "reasons": [
             "Ability power fits the magic-damage ability profile",
             "Ability haste gives more frequent ability casts"
@@ -161,46 +194,43 @@
       "sources": [
         {
           "provider": "op.gg",
-          "url": "https://op.gg/lol/champions/annie/build/mid?patch=16.21&region=global&tier=emerald_plus&type=ranked",
-          "patch": "16.21",
-          "expected": [3118, 3152, 4645],
-          "coreRecall": 0.3333333333333333,
-          "buildRecall": 0.3333333333333333,
-          "orderedRecall": 0,
-          "firstItem": false,
+          "url": "https://op.gg/lol/champions/annie/build/mid?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+          "patch": "16.22",
+          "expected": [3118, 4645, 4646],
+          "coreRecall": 1,
+          "buildRecall": 1,
+          "orderedRecall": 1,
+          "firstItem": true,
           "boots": true,
-          "core": [4629, 3118, 3089]
-        },
-        {
-          "provider": "mobafire.com",
-          "url": "https://www.mobafire.com/league-of-legends/champion/annie-1",
-          "patch": "16.21",
-          "expected": [3118, 3152, 4645],
-          "coreRecall": 0.3333333333333333,
-          "buildRecall": 0.3333333333333333,
-          "orderedRecall": 0,
-          "firstItem": false,
-          "boots": true,
-          "core": [4629, 3118, 3089]
+          "core": [3118, 4645, 4646]
         }
       ],
-      "excludedSources": [],
-      "coreRecall": 0.3333333333333333,
-      "buildRecall": 0.3333333333333333,
-      "orderedRecall": 0
+      "excludedSources": [
+        "https://op.gg/lol/champions/annie/build/mid?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+        "https://www.mobafire.com/league-of-legends/champion/annie-1"
+      ],
+      "coreRecall": 1,
+      "buildRecall": 1,
+      "orderedRecall": 1
     },
     {
       "champion": "Jinx",
       "role": "BOTTOM",
       "group": "development",
-      "ids": [3508, 3006, 3032, 3046, 6672, 3091],
+      "ids": [2523, 3006, 3085, 3031, 3046, 3095],
+      "baseline": {
+        "ids": [],
+        "coreRecall": null,
+        "buildRecall": null,
+        "orderedRecall": null
+      },
       "items": [
         {
-          "name": "Essence Reaver",
+          "name": "Hexoptics C44",
           "reasons": [
             "Attack damage fits physical damage and basic attacks",
             "Critical strikes improve physical basic attacks",
-            "On-hit effect fits attack frequency"
+            "Distance-based attack damage estimated at 341 range; maximum needs 500. Spacing is not observed"
           ]
         },
         {
@@ -211,10 +241,19 @@
           ]
         },
         {
-          "name": "Yun Tal Wildarrows",
+          "name": "Runaan's Hurricane",
+          "reasons": [
+            "Attack speed supports frequent and empowered attacks",
+            "Critical strikes improve physical basic attacks",
+            "On-hit effect fits attack frequency",
+            "Additional bolts spread ranged attacks and on-hit effects"
+          ]
+        },
+        {
+          "name": "Infinity Edge",
           "reasons": [
             "Attack damage fits physical damage and basic attacks",
-            "Attack speed supports frequent and empowered attacks"
+            "Critical strikes improve physical basic attacks"
           ]
         },
         {
@@ -225,70 +264,56 @@
           ]
         },
         {
-          "name": "Kraken Slayer",
+          "name": "Stormrazor",
           "reasons": [
-            "Attack speed supports frequent and empowered attacks",
             "Attack damage fits physical damage and basic attacks",
-            "On-hit effect fits attack frequency"
-          ]
-        },
-        {
-          "name": "Wit's End",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Magic resistance reduces incoming magic damage",
-            "Tenacity against crowd control in enemy kits",
-            "On-hit effect fits attack frequency"
+            "Critical strikes improve physical basic attacks"
           ]
         }
       ],
       "sources": [
         {
           "provider": "op.gg",
-          "url": "https://op.gg/lol/champions/jinx/build/adc?patch=16.21&region=global&tier=emerald_plus&type=ranked",
-          "patch": "16.21",
-          "expected": [3032, 3085, 3031],
-          "coreRecall": 0.3333333333333333,
-          "buildRecall": 0.3333333333333333,
-          "orderedRecall": 0,
-          "firstItem": false,
+          "url": "https://op.gg/lol/champions/jinx/build/adc?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+          "patch": "16.22",
+          "expected": [2523, 3085, 3031],
+          "coreRecall": 1,
+          "buildRecall": 1,
+          "orderedRecall": 1,
+          "firstItem": true,
           "boots": true,
-          "core": [3508, 3032, 3046]
-        },
-        {
-          "provider": "mobafire.com",
-          "url": "https://www.mobafire.com/league-of-legends/build/s2026-21-easy-to-read-simple-1v9-live-ama-full-guide-updated-650672",
-          "patch": "16.21",
-          "expected": [3032, 3085, 3031],
-          "coreRecall": 0.3333333333333333,
-          "buildRecall": 0.3333333333333333,
-          "orderedRecall": 0,
-          "firstItem": false,
-          "boots": true,
-          "core": [3508, 3032, 3046]
+          "core": [2523, 3085, 3031]
         }
       ],
-      "excludedSources": [],
-      "coreRecall": 0.3333333333333333,
-      "buildRecall": 0.3333333333333333,
-      "orderedRecall": 0
+      "excludedSources": [
+        "https://op.gg/lol/champions/jinx/build/adc?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+        "https://www.mobafire.com/league-of-legends/build/s2026-21-easy-to-read-simple-1v9-live-ama-full-guide-updated-650672"
+      ],
+      "coreRecall": 1,
+      "buildRecall": 1,
+      "orderedRecall": 1
     },
     {
       "champion": "Leona",
       "role": "UTILITY",
       "group": "development",
-      "ids": [3877, 3047, 3748, 3115, 3091, 326617],
+      "ids": [3876, 3047, 3190, 3109, 2524, 6664],
+      "baseline": {
+        "ids": [],
+        "coreRecall": null,
+        "buildRecall": null,
+        "orderedRecall": null
+      },
       "items": [
         {
-          "name": "Bloodsong",
+          "name": "Solstice Sleigh",
           "reasons": [
             "Health supports durability and health-scaling effects",
-            "BaseMPRegen supports Leona's stat profile",
+            "Mana regeneration sustains repeated support casts",
             "9 gold per 10 seconds",
             "Vision: 4 ward charges",
             "Support quest reward; purchase requires the completed quest item",
-            "Spellblade follows abilities that empower attacks",
-            "On-hit effect fits attack frequency"
+            "Utility for allies"
           ]
         },
         {
@@ -300,150 +325,192 @@
           ]
         },
         {
-          "name": "Titanic Hydra",
+          "name": "Locket of the Iron Solari",
+          "reasons": [
+            "Armor reduces incoming physical damage",
+            "Ability haste gives more frequent ability casts",
+            "Team shield protects allies during an engage",
+            "Utility for allies"
+          ]
+        },
+        {
+          "name": "Knight's Vow",
+          "reasons": [
+            "Armor reduces incoming physical damage",
+            "Ability haste gives more frequent ability casts",
+            "Durability lets you redirect damage away from an allied carry",
+            "Utility for allies"
+          ]
+        },
+        {
+          "name": "Bandlepipes",
+          "reasons": [
+            "Ability haste gives more frequent ability casts",
+            "Health supports durability and health-scaling effects",
+            "Crowd control grants nearby allies attack speed",
+            "Utility for allies"
+          ]
+        },
+        {
+          "name": "Hollow Radiance",
           "reasons": [
             "Health supports durability and health-scaling effects",
-            "Attack damage fits physical damage and basic attacks",
-            "Health-scaling attack damage and cleave for melee waveclear",
-            "On-hit effect fits attack frequency"
-          ]
-        },
-        {
-          "name": "Nashor's Tooth",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Ability power fits the magic-damage ability profile",
-            "On-hit effect fits attack frequency"
-          ]
-        },
-        {
-          "name": "Wit's End",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
             "Magic resistance reduces incoming magic damage",
-            "Tenacity against crowd control in enemy kits",
-            "On-hit effect fits attack frequency"
-          ]
-        },
-        {
-          "name": "Moonstone Renewer",
-          "reasons": [
-            "Health supports durability and health-scaling effects",
-            "Ability haste gives more frequent ability casts"
+            "Nearby burn adds sustained damage and melee waveclear",
+            "Utility for allies"
           ]
         }
       ],
       "sources": [
         {
           "provider": "op.gg",
-          "url": "https://op.gg/lol/champions/leona/build/support?patch=16.21&region=global&tier=emerald_plus&type=ranked",
-          "patch": "16.21",
+          "url": "https://op.gg/lol/champions/leona/build/support?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+          "patch": "16.22",
           "expected": [3190, 3109, 2524],
-          "coreRecall": 0,
-          "buildRecall": 0,
-          "orderedRecall": 0,
-          "firstItem": false,
+          "coreRecall": 1,
+          "buildRecall": 1,
+          "orderedRecall": 1,
+          "firstItem": true,
           "boots": true,
-          "core": [3748, 3115, 3091]
-        },
-        {
-          "provider": "mobafire.com",
-          "url": "https://www.mobafire.com/league-of-legends/champion/leona-79?page=2",
-          "patch": "16.21",
-          "expected": [3190, 3109, 2524],
-          "coreRecall": 0,
-          "buildRecall": 0,
-          "orderedRecall": 0,
-          "firstItem": false,
-          "boots": true,
-          "core": [3748, 3115, 3091]
+          "core": [3190, 3109, 2524]
         }
       ],
-      "excludedSources": [],
-      "coreRecall": 0,
-      "buildRecall": 0,
-      "orderedRecall": 0
+      "excludedSources": [
+        "https://op.gg/lol/champions/leona/build/support?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+        "https://www.mobafire.com/league-of-legends/champion/leona-79?page=2"
+      ],
+      "coreRecall": 1,
+      "buildRecall": 1,
+      "orderedRecall": 1
     },
     {
       "champion": "Darius",
       "role": "TOP",
       "group": "development",
-      "ids": [3078, 3006, 3748, 3046, 3032, 3091],
+      "ids": [3158, 3071, 6692, 6631, 3142, 6333],
+      "baseline": {
+        "ids": [],
+        "coreRecall": null,
+        "buildRecall": null,
+        "orderedRecall": null
+      },
       "items": [
         {
-          "name": "Trinity Force",
+          "name": "Ionian Boots of Lucidity",
+          "reasons": [
+            "Movement speed helps positioning and reaching targets",
+            "Ability haste gives more frequent ability casts"
+          ]
+        },
+        {
+          "name": "Black Cleaver",
           "reasons": [
             "Attack damage fits physical damage and basic attacks",
-            "Attack speed supports frequent and empowered attacks",
-            "Spellblade follows abilities that empower attacks",
-            "On-hit effect fits attack frequency"
+            "Ability haste gives more frequent ability casts",
+            "Repeated physical damage stacks armor reduction"
           ]
         },
         {
-          "name": "Berserker's Greaves",
+          "name": "Eclipse",
           "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Movement speed helps positioning and reaching targets"
+            "Attack damage fits physical damage and basic attacks",
+            "Ability haste gives more frequent ability casts",
+            "On-hit effect fits attack frequency",
+            "Repeated attack and ability trades trigger a protective shield"
           ]
         },
         {
-          "name": "Titanic Hydra",
+          "name": "Stridebreaker",
           "reasons": [
             "Attack damage fits physical damage and basic attacks",
             "Health supports durability and health-scaling effects",
-            "Health-scaling attack damage and cleave for melee waveclear",
-            "On-hit effect fits attack frequency"
+            "On-hit effect fits attack frequency",
+            "Cleave and an active slow help a melee fighter stick to targets"
           ]
         },
         {
-          "name": "Phantom Dancer",
+          "name": "Youmuu's Ghostblade",
           "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Critical strikes improve physical basic attacks"
+            "Attack damage fits physical damage and basic attacks",
+            "Lethality improves physical damage against armor",
+            "Out-of-combat movement speed supports roaming and reaching fights"
           ]
         },
         {
-          "name": "Yun Tal Wildarrows",
+          "name": "Death's Dance",
           "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Attack damage fits physical damage and basic attacks"
-          ]
-        },
-        {
-          "name": "Wit's End",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Magic resistance reduces incoming magic damage",
-            "Tenacity against crowd control in enemy kits",
-            "On-hit effect fits attack frequency"
+            "Attack damage fits physical damage and basic attacks",
+            "Armor reduces incoming physical damage",
+            "Bonus attack damage scales the conditional takedown heal"
           ]
         }
       ],
       "sources": [
         {
           "provider": "op.gg",
-          "url": "https://op.gg/lol/champions/darius/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked",
-          "patch": "16.21",
+          "url": "https://op.gg/lol/champions/darius/build/top?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+          "patch": "16.22",
           "expected": [3142, 3742, 6333],
           "coreRecall": 0,
-          "buildRecall": 0,
+          "buildRecall": 0.6666666666666666,
           "orderedRecall": 0,
           "firstItem": false,
           "boots": false,
-          "core": [3078, 3748, 3046]
+          "core": [3071, 6692, 6631]
         }
       ],
-      "excludedSources": [],
+      "excludedSources": [
+        "https://op.gg/lol/champions/darius/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked"
+      ],
       "coreRecall": 0,
-      "buildRecall": 0,
+      "buildRecall": 0.6666666666666666,
       "orderedRecall": 0
     },
     {
       "champion": "LeeSin",
       "role": "JUNGLE",
       "group": "development",
-      "ids": [6696, 3047, 3748, 3078, 3032, 3046],
+      "ids": [3071, 3047, 6692, 6610, 6696, 6631],
+      "baseline": {
+        "ids": [],
+        "coreRecall": null,
+        "buildRecall": null,
+        "orderedRecall": null
+      },
       "items": [
+        {
+          "name": "Black Cleaver",
+          "reasons": [
+            "Attack damage fits physical damage and basic attacks",
+            "Ability haste gives more frequent ability casts",
+            "Repeated physical damage stacks armor reduction"
+          ]
+        },
+        {
+          "name": "Plated Steelcaps",
+          "reasons": [
+            "Movement speed helps positioning and reaching targets",
+            "Armor reduces incoming physical damage",
+            "Attack damage reduction against physical threats"
+          ]
+        },
+        {
+          "name": "Eclipse",
+          "reasons": [
+            "Attack damage fits physical damage and basic attacks",
+            "Ability haste gives more frequent ability casts",
+            "On-hit effect fits attack frequency",
+            "Repeated attack and ability trades trigger a protective shield"
+          ]
+        },
+        {
+          "name": "Sundered Sky",
+          "reasons": [
+            "Attack damage fits physical damage and basic attacks",
+            "Health supports durability and health-scaling effects",
+            "First-hit healing supports extended melee trades"
+          ]
+        },
         {
           "name": "Axiom Arc",
           "reasons": [
@@ -452,89 +519,79 @@
           ]
         },
         {
-          "name": "Plated Steelcaps",
-          "reasons": [
-            "Movement speed helps positioning and reaching targets",
-            "Armor reduces incoming physical damage",
-            "Attack damage reduction against physical threats"
-          ]
-        },
-        {
-          "name": "Titanic Hydra",
-          "reasons": [
-            "Health supports durability and health-scaling effects",
-            "Attack damage fits physical damage and basic attacks",
-            "Health-scaling attack damage and cleave for melee waveclear",
-            "On-hit effect fits attack frequency"
-          ]
-        },
-        {
-          "name": "Trinity Force",
+          "name": "Stridebreaker",
           "reasons": [
             "Attack damage fits physical damage and basic attacks",
             "Attack speed supports frequent and empowered attacks",
-            "On-hit effect fits attack frequency"
-          ]
-        },
-        {
-          "name": "Yun Tal Wildarrows",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Attack damage fits physical damage and basic attacks"
-          ]
-        },
-        {
-          "name": "Phantom Dancer",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Critical strikes improve physical basic attacks"
+            "On-hit effect fits attack frequency",
+            "Cleave and an active slow help a melee fighter stick to targets"
           ]
         }
       ],
       "sources": [
         {
           "provider": "op.gg",
-          "url": "https://op.gg/lol/champions/leesin/build/jungle?patch=16.21&region=global&tier=emerald_plus&type=ranked",
-          "patch": "16.21",
+          "url": "https://op.gg/lol/champions/leesin/build/jungle?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+          "patch": "16.22",
           "expected": [6692, 3071, 6333],
-          "coreRecall": 0,
-          "buildRecall": 0,
+          "coreRecall": 0.6666666666666666,
+          "buildRecall": 0.6666666666666666,
           "orderedRecall": 0,
           "firstItem": false,
           "boots": true,
-          "core": [6696, 3748, 3078]
+          "core": [3071, 6692, 6610]
         }
       ],
-      "excludedSources": [],
-      "coreRecall": 0,
-      "buildRecall": 0,
+      "excludedSources": [
+        "https://op.gg/lol/champions/leesin/build/jungle?patch=16.21&region=global&tier=emerald_plus&type=ranked"
+      ],
+      "coreRecall": 0.6666666666666666,
+      "buildRecall": 0.6666666666666666,
       "orderedRecall": 0
     },
     {
       "champion": "Ahri",
       "role": "MIDDLE",
       "group": "validation",
-      "ids": [4629, 3158, 3118, 3089, 6655, 3165],
+      "ids": [3118, 3020, 4645, 4646, 3089, 4629],
+      "baseline": {
+        "ids": [],
+        "coreRecall": null,
+        "buildRecall": null,
+        "orderedRecall": null
+      },
       "items": [
-        {
-          "name": "Cosmic Drive",
-          "reasons": [
-            "Ability haste gives more frequent ability casts",
-            "Ability power fits the magic-damage ability profile"
-          ]
-        },
-        {
-          "name": "Ionian Boots of Lucidity",
-          "reasons": [
-            "Ability haste gives more frequent ability casts",
-            "Movement speed helps positioning and reaching targets"
-          ]
-        },
         {
           "name": "Malignance",
           "reasons": [
             "Ability power fits the magic-damage ability profile",
-            "Ability haste gives more frequent ability casts"
+            "Ability haste gives more frequent ability casts",
+            "Ultimate damage benefits from ultimate haste and the damage zone"
+          ]
+        },
+        {
+          "name": "Sorcerer's Shoes",
+          "reasons": [
+            "Magic penetration improves damage against magic resistance",
+            "Movement speed helps positioning and reaching targets",
+            "Penetration against estimated magic resistance"
+          ]
+        },
+        {
+          "name": "Shadowflame",
+          "reasons": [
+            "Ability power fits the magic-damage ability profile",
+            "Magic penetration improves damage against magic resistance",
+            "Penetration against estimated magic resistance",
+            "Low-health damage amplification supports magic burst"
+          ]
+        },
+        {
+          "name": "Stormsurge",
+          "reasons": [
+            "Ability power fits the magic-damage ability profile",
+            "Magic penetration improves damage against magic resistance",
+            "Penetration against estimated magic resistance"
           ]
         },
         {
@@ -542,14 +599,7 @@
           "reasons": ["Ability power fits the magic-damage ability profile"]
         },
         {
-          "name": "Luden's Echo",
-          "reasons": [
-            "Ability power fits the magic-damage ability profile",
-            "Ability haste gives more frequent ability casts"
-          ]
-        },
-        {
-          "name": "Morellonomicon",
+          "name": "Cosmic Drive",
           "reasons": [
             "Ability power fits the magic-damage ability profile",
             "Ability haste gives more frequent ability casts"
@@ -559,70 +609,51 @@
       "sources": [
         {
           "provider": "op.gg",
-          "url": "https://op.gg/lol/champions/ahri/build/mid?patch=16.21&region=global&tier=emerald_plus&type=ranked",
-          "patch": "16.21",
+          "url": "https://op.gg/lol/champions/ahri/build/mid?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+          "patch": "16.22",
           "expected": [3118, 4645, 3089],
           "coreRecall": 0.6666666666666666,
-          "buildRecall": 0.6666666666666666,
-          "orderedRecall": 0.3333333333333333,
-          "firstItem": false,
+          "buildRecall": 1,
+          "orderedRecall": 0.6666666666666666,
+          "firstItem": true,
           "boots": true,
-          "core": [4629, 3118, 3089]
+          "core": [3118, 4645, 4646]
         }
       ],
-      "excludedSources": [],
+      "excludedSources": [
+        "https://op.gg/lol/champions/ahri/build/mid?patch=16.21&region=global&tier=emerald_plus&type=ranked"
+      ],
       "coreRecall": 0.6666666666666666,
-      "buildRecall": 0.6666666666666666,
-      "orderedRecall": 0.3333333333333333
+      "buildRecall": 1,
+      "orderedRecall": 0.6666666666666666
     },
     {
       "champion": "Garen",
       "role": "TOP",
       "group": "validation",
-      "ids": [2510, 3047, 3748, 3091, 6672, 3046],
+      "ids": [3047, 6631, 3046, 3508, 3031, 2512],
+      "baseline": {
+        "ids": [],
+        "coreRecall": null,
+        "buildRecall": null,
+        "orderedRecall": null
+      },
       "items": [
-        {
-          "name": "Dusk and Dawn",
-          "reasons": [
-            "Health supports durability and health-scaling effects",
-            "Attack speed supports frequent and empowered attacks",
-            "Spellblade follows abilities that empower attacks",
-            "Repeats on-hit effects from empowered attacks",
-            "On-hit effect fits attack frequency"
-          ]
-        },
         {
           "name": "Plated Steelcaps",
           "reasons": [
-            "Armor reduces incoming physical damage",
             "Movement speed helps positioning and reaching targets",
+            "Armor reduces incoming physical damage",
             "Attack damage reduction against physical threats"
           ]
         },
         {
-          "name": "Titanic Hydra",
+          "name": "Stridebreaker",
           "reasons": [
+            "Attack damage fits physical damage and basic attacks",
             "Health supports durability and health-scaling effects",
-            "Attack damage fits physical damage and basic attacks",
-            "Health-scaling attack damage and cleave for melee waveclear",
-            "On-hit effect fits attack frequency"
-          ]
-        },
-        {
-          "name": "Wit's End",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Magic resistance reduces incoming magic damage",
-            "Tenacity against crowd control in enemy kits",
-            "On-hit effect fits attack frequency"
-          ]
-        },
-        {
-          "name": "Kraken Slayer",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Attack damage fits physical damage and basic attacks",
-            "On-hit effect fits attack frequency"
+            "On-hit effect fits attack frequency",
+            "Cleave and an active slow help a melee fighter stick to targets"
           ]
         },
         {
@@ -631,50 +662,70 @@
             "Attack speed supports frequent and empowered attacks",
             "Critical strikes improve physical basic attacks"
           ]
+        },
+        {
+          "name": "Essence Reaver",
+          "reasons": [
+            "Attack damage fits physical damage and basic attacks",
+            "Critical strikes improve physical basic attacks",
+            "Spellblade follows abilities that empower attacks",
+            "On-hit effect fits attack frequency"
+          ]
+        },
+        {
+          "name": "Infinity Edge",
+          "reasons": [
+            "Attack damage fits physical damage and basic attacks",
+            "Critical strikes improve physical basic attacks"
+          ]
+        },
+        {
+          "name": "Fiendhunter Bolts",
+          "reasons": [
+            "Critical strikes improve physical basic attacks",
+            "Attack speed supports frequent and empowered attacks"
+          ]
         }
       ],
       "sources": [
         {
           "provider": "op.gg",
-          "url": "https://op.gg/lol/champions/garen/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked",
-          "patch": "16.21",
+          "url": "https://op.gg/lol/champions/garen/build/top?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+          "patch": "16.22",
           "expected": [6631, 3046, 3033],
-          "coreRecall": 0,
-          "buildRecall": 0.3333333333333333,
-          "orderedRecall": 0,
-          "firstItem": false,
+          "coreRecall": 0.6666666666666666,
+          "buildRecall": 0.6666666666666666,
+          "orderedRecall": 0.6666666666666666,
+          "firstItem": true,
           "boots": false,
-          "core": [2510, 3748, 3091]
-        },
-        {
-          "provider": "mobafire.com",
-          "url": "https://www.mobafire.com/league-of-legends/build/26-21-challenger-garen-top-guide-642197",
-          "patch": "16.21",
-          "expected": [6631, 3046, 3036],
-          "coreRecall": 0,
-          "buildRecall": 0.3333333333333333,
-          "orderedRecall": 0,
-          "firstItem": false,
-          "boots": false,
-          "core": [2510, 3748, 3091]
+          "core": [6631, 3046, 3508]
         }
       ],
-      "excludedSources": [],
-      "coreRecall": 0,
-      "buildRecall": 0.3333333333333333,
-      "orderedRecall": 0
+      "excludedSources": [
+        "https://op.gg/lol/champions/garen/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+        "https://www.mobafire.com/league-of-legends/build/26-21-challenger-garen-top-guide-642197"
+      ],
+      "coreRecall": 0.6666666666666666,
+      "buildRecall": 0.6666666666666666,
+      "orderedRecall": 0.6666666666666666
     },
     {
       "champion": "Soraka",
       "role": "UTILITY",
       "group": "validation",
-      "ids": [3870, 3158, 6620, 6617, 4005, 2065],
+      "ids": [3870, 3158, 6617, 3107, 6621, 3190],
+      "baseline": {
+        "ids": [],
+        "coreRecall": null,
+        "buildRecall": null,
+        "orderedRecall": null
+      },
       "items": [
         {
           "name": "Dream Maker",
           "reasons": [
-            "BaseMPRegen supports Soraka's stat profile",
             "Mana regeneration sustains repeated support casts",
+            "Health supports durability and health-scaling effects",
             "9 gold per 10 seconds",
             "Vision: 4 ward charges",
             "Support quest reward; purchase requires the completed quest item",
@@ -690,154 +741,163 @@
           ]
         },
         {
-          "name": "Echoes of Helia",
-          "reasons": [
-            "BaseMPRegen supports Soraka's stat profile",
-            "Mana regeneration sustains repeated support casts",
-            "Utility for allies"
-          ]
-        },
-        {
           "name": "Moonstone Renewer",
           "reasons": [
-            "BaseMPRegen supports Soraka's stat profile",
+            "Ability haste gives more frequent ability casts",
             "Mana regeneration sustains repeated support casts",
+            "Ally healing and shielding chain to additional teammates",
             "Utility for allies"
           ]
         },
         {
-          "name": "Imperial Mandate",
+          "name": "Redemption",
           "reasons": [
-            "BaseMPRegen supports Soraka's stat profile",
-            "Mana regeneration sustains repeated support casts"
+            "Ability haste gives more frequent ability casts",
+            "Mana regeneration sustains repeated support casts",
+            "Area healing supports team protection",
+            "Utility for allies"
           ]
         },
         {
-          "name": "Shurelya's Battlesong",
+          "name": "Dawncore",
           "reasons": [
-            "BaseMPRegen supports Soraka's stat profile",
-            "Mana regeneration sustains repeated support casts"
+            "Mana regeneration sustains repeated support casts",
+            "Ability power fits the magic-damage ability profile",
+            "Owned mana regeneration scales healing power and ability power",
+            "Utility for allies"
+          ]
+        },
+        {
+          "name": "Locket of the Iron Solari",
+          "reasons": [
+            "Ability haste gives more frequent ability casts",
+            "Magic resistance reduces incoming magic damage",
+            "Team shield protects allies during an engage",
+            "Utility for allies"
           ]
         }
       ],
       "sources": [
         {
           "provider": "op.gg",
-          "url": "https://op.gg/lol/champions/soraka/build/support?patch=16.21&region=global&tier=emerald_plus&type=ranked",
-          "patch": "16.21",
+          "url": "https://op.gg/lol/champions/soraka/build/support?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+          "patch": "16.22",
           "expected": [6617, 3107, 6621],
-          "coreRecall": 0.3333333333333333,
-          "buildRecall": 0.3333333333333333,
-          "orderedRecall": 0,
-          "firstItem": false,
+          "coreRecall": 1,
+          "buildRecall": 1,
+          "orderedRecall": 1,
+          "firstItem": true,
           "boots": true,
-          "core": [6620, 6617, 4005]
-        },
-        {
-          "provider": "mobafire.com",
-          "url": "https://www.mobafire.com/league-of-legends/build/26-21-actioners-soraka-support-guide-638014",
-          "patch": "16.21",
-          "expected": [6617, 3107, 6621],
-          "coreRecall": 0.3333333333333333,
-          "buildRecall": 0.3333333333333333,
-          "orderedRecall": 0,
-          "firstItem": false,
-          "boots": false,
-          "core": [6620, 6617, 4005]
+          "core": [6617, 3107, 6621]
         }
       ],
-      "excludedSources": [],
-      "coreRecall": 0.3333333333333333,
-      "buildRecall": 0.3333333333333333,
-      "orderedRecall": 0
+      "excludedSources": [
+        "https://op.gg/lol/champions/soraka/build/support?patch=16.21&region=global&tier=emerald_plus&type=ranked",
+        "https://www.mobafire.com/league-of-legends/build/26-21-actioners-soraka-support-guide-638014"
+      ],
+      "coreRecall": 1,
+      "buildRecall": 1,
+      "orderedRecall": 1
     },
     {
       "champion": "Khazix",
       "role": "JUNGLE",
       "group": "validation",
-      "ids": [3508, 3006, 3032, 3046, 6672, 3091],
+      "ids": [3179, 3158, 6699, 3071, 6692, 6696],
+      "baseline": {
+        "ids": [],
+        "coreRecall": null,
+        "buildRecall": null,
+        "orderedRecall": null
+      },
       "items": [
         {
-          "name": "Essence Reaver",
+          "name": "Umbral Glaive",
           "reasons": [
             "Attack damage fits physical damage and basic attacks",
-            "Critical strikes improve physical basic attacks",
-            "Spellblade follows abilities that empower attacks",
-            "On-hit effect fits attack frequency"
+            "Lethality improves physical damage against armor",
+            "Out-of-vision attacks and ward clearing support an assassin approach"
           ]
         },
         {
-          "name": "Berserker's Greaves",
+          "name": "Ionian Boots of Lucidity",
           "reasons": [
-            "Attack speed supports frequent and empowered attacks",
+            "Ability haste gives more frequent ability casts",
             "Movement speed helps positioning and reaching targets"
           ]
         },
         {
-          "name": "Yun Tal Wildarrows",
+          "name": "Voltaic Cyclosword",
           "reasons": [
             "Attack damage fits physical damage and basic attacks",
-            "Attack speed supports frequent and empowered attacks"
+            "Lethality improves physical damage against armor",
+            "Ability-triggered energized damage and temporary lethality support short trades"
           ]
         },
         {
-          "name": "Phantom Dancer",
+          "name": "Black Cleaver",
           "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Critical strikes improve physical basic attacks"
-          ]
-        },
-        {
-          "name": "Kraken Slayer",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
             "Attack damage fits physical damage and basic attacks",
-            "On-hit effect fits attack frequency"
+            "Ability haste gives more frequent ability casts",
+            "Repeated physical damage stacks armor reduction"
           ]
         },
         {
-          "name": "Wit's End",
+          "name": "Eclipse",
           "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Magic resistance reduces incoming magic damage",
-            "Tenacity against crowd control in enemy kits",
-            "On-hit effect fits attack frequency"
+            "Attack damage fits physical damage and basic attacks",
+            "Ability haste gives more frequent ability casts",
+            "On-hit effect fits attack frequency",
+            "Repeated attack and ability trades trigger a protective shield"
+          ]
+        },
+        {
+          "name": "Axiom Arc",
+          "reasons": [
+            "Attack damage fits physical damage and basic attacks",
+            "Lethality improves physical damage against armor"
           ]
         }
       ],
       "sources": [
         {
           "provider": "op.gg",
-          "url": "https://op.gg/lol/champions/khazix/build/jungle?patch=16.21&region=global&tier=emerald_plus&type=ranked",
-          "patch": "16.21",
-          "expected": [3179, 6699, 2520],
-          "coreRecall": 0,
-          "buildRecall": 0,
-          "orderedRecall": 0,
-          "firstItem": false,
-          "boots": false,
-          "core": [3508, 3032, 3046]
+          "url": "https://op.gg/lol/champions/khazix/build/jungle?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+          "patch": "16.22",
+          "expected": [3179, 6699, 3814],
+          "coreRecall": 0.6666666666666666,
+          "buildRecall": 0.6666666666666666,
+          "orderedRecall": 0.6666666666666666,
+          "firstItem": true,
+          "boots": true,
+          "core": [3179, 6699, 3071]
         }
       ],
-      "excludedSources": [],
-      "coreRecall": 0,
-      "buildRecall": 0,
-      "orderedRecall": 0
+      "excludedSources": [
+        "https://op.gg/lol/champions/khazix/build/jungle?patch=16.21&region=global&tier=emerald_plus&type=ranked"
+      ],
+      "coreRecall": 0.6666666666666666,
+      "buildRecall": 0.6666666666666666,
+      "orderedRecall": 0.6666666666666666
     },
     {
       "champion": "Malphite",
       "role": "TOP",
       "group": "validation",
-      "ids": [2510, 3047, 3748, 3115, 3091, 3046],
+      "ids": [3068, 3047, 2525, 3110, 2504, 3190],
+      "baseline": {
+        "ids": [],
+        "coreRecall": null,
+        "buildRecall": null,
+        "orderedRecall": null
+      },
       "items": [
         {
-          "name": "Dusk and Dawn",
+          "name": "Sunfire Aegis",
           "reasons": [
+            "Armor reduces incoming physical damage",
             "Health supports durability and health-scaling effects",
-            "Ability haste gives more frequent ability casts",
-            "Spellblade follows abilities that empower attacks",
-            "Repeats on-hit effects from empowered attacks",
-            "On-hit effect fits attack frequency"
+            "Nearby burn adds sustained damage and melee waveclear"
           ]
         },
         {
@@ -849,134 +909,136 @@
           ]
         },
         {
-          "name": "Titanic Hydra",
+          "name": "Protoplasm Harness",
           "reasons": [
             "Health supports durability and health-scaling effects",
-            "Attack damage fits physical damage and basic attacks",
-            "Health-scaling attack damage and cleave for melee waveclear",
-            "On-hit effect fits attack frequency"
+            "Ability haste gives more frequent ability casts",
+            "Tenacity against crowd control in enemy kits"
           ]
         },
         {
-          "name": "Nashor's Tooth",
+          "name": "Frozen Heart",
           "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Ability power fits the magic-damage ability profile",
-            "On-hit effect fits attack frequency"
+            "Armor reduces incoming physical damage",
+            "Ability haste gives more frequent ability casts"
           ]
         },
         {
-          "name": "Wit's End",
+          "name": "Kaenic Rookern",
           "reasons": [
-            "Attack speed supports frequent and empowered attacks",
             "Magic resistance reduces incoming magic damage",
-            "Tenacity against crowd control in enemy kits",
-            "On-hit effect fits attack frequency"
+            "Health supports durability and health-scaling effects"
           ]
         },
         {
-          "name": "Phantom Dancer",
+          "name": "Locket of the Iron Solari",
           "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Movement speed helps positioning and reaching targets"
+            "Magic resistance reduces incoming magic damage",
+            "Armor reduces incoming physical damage"
           ]
         }
       ],
       "sources": [
         {
           "provider": "op.gg",
-          "url": "https://op.gg/lol/champions/malphite/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked",
-          "patch": "16.21",
+          "url": "https://op.gg/lol/champions/malphite/build/top?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+          "patch": "16.22",
           "expected": [3068, 3075, 3110],
-          "coreRecall": 0,
-          "buildRecall": 0,
-          "orderedRecall": 0,
-          "firstItem": false,
+          "coreRecall": 0.6666666666666666,
+          "buildRecall": 0.6666666666666666,
+          "orderedRecall": 0.6666666666666666,
+          "firstItem": true,
           "boots": true,
-          "core": [2510, 3748, 3115]
+          "core": [3068, 2525, 3110]
         }
       ],
-      "excludedSources": [],
-      "coreRecall": 0,
-      "buildRecall": 0,
-      "orderedRecall": 0
+      "excludedSources": [
+        "https://op.gg/lol/champions/malphite/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked"
+      ],
+      "coreRecall": 0.6666666666666666,
+      "buildRecall": 0.6666666666666666,
+      "orderedRecall": 0.6666666666666666
     },
     {
       "champion": "Kayle",
       "role": "TOP",
       "group": "validation",
-      "ids": [2510, 3006, 3115, 3748, 3091, 3046],
+      "ids": [3006, 3115, 2510, 4645, 3089, 4646],
+      "baseline": {
+        "ids": [],
+        "coreRecall": null,
+        "buildRecall": null,
+        "orderedRecall": null
+      },
       "items": [
+        {
+          "name": "Berserker's Greaves",
+          "reasons": [
+            "Movement speed helps positioning and reaching targets",
+            "Attack speed supports frequent and empowered attacks"
+          ]
+        },
+        {
+          "name": "Nashor's Tooth",
+          "reasons": [
+            "Ability power fits the magic-damage ability profile",
+            "Attack speed supports frequent and empowered attacks",
+            "On-hit effect fits attack frequency",
+            "Every attack adds magic damage that scales with ability power"
+          ]
+        },
         {
           "name": "Dusk and Dawn",
           "reasons": [
             "Ability power fits the magic-damage ability profile",
-            "Ability haste gives more frequent ability casts",
+            "Attack speed supports frequent and empowered attacks",
             "Spellblade follows abilities that empower attacks",
             "Repeats on-hit effects from empowered attacks",
             "On-hit effect fits attack frequency"
           ]
         },
         {
-          "name": "Berserker's Greaves",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Movement speed helps positioning and reaching targets"
-          ]
-        },
-        {
-          "name": "Nashor's Tooth",
+          "name": "Shadowflame",
           "reasons": [
             "Ability power fits the magic-damage ability profile",
-            "Attack speed supports frequent and empowered attacks",
-            "On-hit effect fits attack frequency"
+            "Magic penetration improves damage against magic resistance",
+            "Penetration against estimated magic resistance",
+            "Low-health damage amplification supports magic burst"
           ]
         },
         {
-          "name": "Titanic Hydra",
-          "reasons": [
-            "Health supports durability and health-scaling effects",
-            "Attack damage fits physical damage and basic attacks",
-            "Health-scaling attack damage and cleave for melee waveclear",
-            "On-hit effect fits attack frequency"
-          ]
+          "name": "Rabadon's Deathcap",
+          "reasons": ["Ability power fits the magic-damage ability profile"]
         },
         {
-          "name": "Wit's End",
+          "name": "Stormsurge",
           "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Magic resistance reduces incoming magic damage",
-            "Tenacity against crowd control in enemy kits",
-            "On-hit effect fits attack frequency"
-          ]
-        },
-        {
-          "name": "Phantom Dancer",
-          "reasons": [
-            "Attack speed supports frequent and empowered attacks",
-            "Critical strikes improve physical basic attacks"
+            "Ability power fits the magic-damage ability profile",
+            "Magic penetration improves damage against magic resistance",
+            "Penetration against estimated magic resistance"
           ]
         }
       ],
       "sources": [
         {
           "provider": "op.gg",
-          "url": "https://op.gg/lol/champions/kayle/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked",
-          "patch": "16.21",
-          "expected": [3115, 2510, 3089],
-          "coreRecall": 0.6666666666666666,
-          "buildRecall": 0.6666666666666666,
-          "orderedRecall": 0,
-          "firstItem": false,
+          "url": "https://op.gg/lol/champions/kayle/build/top?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+          "patch": "16.22",
+          "expected": [3115, 2510, 4645],
+          "coreRecall": 1,
+          "buildRecall": 1,
+          "orderedRecall": 1,
+          "firstItem": true,
           "boots": true,
-          "core": [2510, 3115, 3748]
+          "core": [3115, 2510, 4645]
         }
       ],
-      "excludedSources": [],
-      "coreRecall": 0.6666666666666666,
-      "buildRecall": 0.6666666666666666,
-      "orderedRecall": 0
+      "excludedSources": [
+        "https://op.gg/lol/champions/kayle/build/top?patch=16.21&region=global&tier=emerald_plus&type=ranked"
+      ],
+      "coreRecall": 1,
+      "buildRecall": 1,
+      "orderedRecall": 1
     }
-  ],
-  "catalogSha256": "481f9d95aea03c02b705dae170d0a1095aeb74aafb9ed6131ce8f90de63c93a3"
+  ]
 }

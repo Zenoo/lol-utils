@@ -83,7 +83,12 @@ export function profile(c: Champion, role = '') {
     marksman,
     assassin,
     defender,
-    critScaling: marksman || /critical strike|critically strike/.test(text),
+    critScaling:
+      marksman || c.mechanics?.criticalScaling || /critical strike|critically strike/.test(text),
+    abilityAttackSpeed: c.mechanics?.attackSpeedScaling ?? false,
+    innateArmorPenetration:
+      1 -
+      (1 - (c.mechanics?.innateArmorPenetration ?? 0)) * (1 - (c.mechanics?.innateArmorShred ?? 0)),
     melee: tactical.attackType === 'melee',
     taunt: /taunt/.test(text),
     globalTravel: c.spells.some(
@@ -369,6 +374,7 @@ export class Engine {
           : 1) * (p.defender && Number(ownStats.offensiveItems ?? 0) >= 2 ? 0.45 : 1);
     const attackDamage = Number(ownStats.attackDamage ?? champ.stats.attackdamage);
     const crit = clamp(Number(ownStats.critChance ?? 0));
+    const attackFrequency = Math.max(p.attacks, p.abilityAttackSpeed ? 0.75 : 0);
     const critDamagePrice = this.prices.get('FlatCritDamageMod') ?? 25;
     const healthRatio =
       Number(ownStats.bonusHealth ?? 0) /
@@ -378,10 +384,10 @@ export class Engine {
       FlatPhysicalDamageMod:
         (1 - p.magic) * (0.7 + p.attacks) * offense * (0.75 + p.teamMagic * 0.5),
       PercentAttackSpeedMod:
-        ((p.attacks *
+        ((attackFrequency *
           offense *
           (1.2 - p.magic * 0.3) *
-          (p.critScaling || p.repeatedAttacks ? 1 : 0.5)) /
+          (p.critScaling || p.repeatedAttacks || p.abilityAttackSpeed ? 1 : 0.5)) /
           (1 + Number(ownStats.attackSpeedBonus ?? 0))) *
         Math.max(
           1,
@@ -390,20 +396,21 @@ export class Engine {
         ),
       FlatCritChanceMod:
         (p.critScaling ? 1 : 0.12) *
-        p.attacks *
+        attackFrequency *
         offense *
         (1 - p.magic) *
         Math.min(3, attackDamage / champ.stats.attackdamage),
       // Marginal expected attack damage from extra crit damage, priced against attack damage.
       FlatCritDamageMod:
         ((p.critScaling ? 1 : 0) *
-          p.attacks *
+          attackFrequency *
           offense *
           crit *
           attackDamage *
           (this.prices.get('FlatPhysicalDamageMod') ?? 35)) /
         ((1 + crit * 0.75) * critDamagePrice),
-      PercentArmorPenetrationMod: (1 - p.magic) * offense * clamp(p.enemyArmor / 100),
+      PercentArmorPenetrationMod:
+        (1 - p.magic) * offense * clamp((p.enemyArmor * (1 - p.innateArmorPenetration)) / 100),
       FlatHPPoolMod: (0.12 + p.tank * (p.marksman ? 0.15 : 0.7)) / (1 + healthRatio),
       FlatArmorMod:
         (((0.3 + p.tank) * p.physical * (1 + healthRatio)) /
@@ -417,8 +424,10 @@ export class Engine {
           (1 + Number(ownStats.resourceMax ?? champ.stats.mp) / Math.max(1, champ.stats.mp))
         : 0,
       PercentLifeStealMod: p.attacks * offense * 0.8,
-      FlatMovementSpeedMod: 0.6,
-      PercentMovementSpeedMod: 0.6,
+      FlatMovementSpeedMod:
+        0.6 + (p.melee && !p.defender && !p.assassin && !p.support ? (1 - p.mobility) * 1.5 : 0),
+      PercentMovementSpeedMod:
+        0.6 + (p.melee && !p.defender && !p.assassin && !p.support ? (1 - p.mobility) * 1.5 : 0),
       AbilityHaste:
         (1 - p.attacks * 0.6) *
         (p.marksman ? 0.35 : 1) *
@@ -436,11 +445,13 @@ export class Engine {
       // Unpriced stats use labelled magnitude, marked as a model assumption in the UI.
       const reference =
         this.prices.get(key) ??
-        (key === 'MagicPen'
-          ? 50
-          : key.includes('Percent') || key === 'HealShieldPower' || key === 'ManaRegen'
-            ? 1000
-            : 25);
+        (key === 'PercentMovementSpeedMod'
+          ? champ.stats.movespeed * (this.prices.get('FlatMovementSpeedMod') ?? 12)
+          : key === 'MagicPen'
+            ? 50
+            : key.includes('Percent') || key === 'HealShieldPower' || key === 'ManaRegen'
+              ? 1000
+              : 25);
       contributions.push([key, Math.max(0, value) * reference * (weights[key] ?? 0)]);
     }
     let value = sum(contributions.map(([, n]) => n));
@@ -548,7 +559,7 @@ export class Engine {
         item.gold.total *
         Math.max(0.3, p.attacks) *
         (stats.FlatMagicDamageMod ? p.magic : 1 - p.magic) *
-        0.5 *
+        (p.marksman ? 0.25 : 0.5) *
         (p.defender && !p.repeatedAttacks ? 0.25 : 1);
       reasons.push('Spellblade follows abilities that empower attacks');
       if (/on.hit effects an additional time/.test(text)) {
@@ -556,7 +567,7 @@ export class Engine {
           item.gold.total *
           p.attacks *
           p.magic *
-          0.45 *
+          (0.15 + Number(ownStats.onHitItems ?? 0) * 0.3) *
           (p.defender && !p.repeatedAttacks ? 0.25 : 1);
         reasons.push('Repeats on-hit effects from empowered attacks');
       }
@@ -590,6 +601,19 @@ export class Engine {
     if (/on.hit|on hit/.test(text)) {
       value += item.gold.total * p.attacks * offense * 0.15;
       reasons.push('On-hit effect fits attack frequency');
+    }
+    if (effects.NashorsBaseValue && effects.NashorsAPValue) {
+      const damage =
+        effects.NashorsBaseValue +
+        effects.NashorsAPValue *
+          (Number(ownStats.abilityPower ?? 0) + (stats.FlatMagicDamageMod ?? 0));
+      value +=
+        damage *
+        p.attacks *
+        offense *
+        (p.defender ? 0.35 : 1) *
+        (this.prices.get('FlatPhysicalDamageMod') ?? 35);
+      reasons.push('Every attack adds magic damage that scales with ability power');
     }
     if (
       effects.UltimateHaste &&
@@ -627,13 +651,22 @@ export class Engine {
       value += item.gold.total * p.attacks * 0.35;
       reasons.push('Additional bolts spread ranged attacks and on-hit effects');
     }
-    if (effects.MaxDamageAmp && effects.MaxRange && p.marksman) {
+    if (effects.MaxDamageAmp && effects.MaxRange && p.marksman && !p.melee) {
+      // Maximum reach is not sustained combat distance. With no target-position feed,
+      // use conservative spacing and price the extra attack damage, not the item's cost.
+      // The range buff after a takedown is conditional and is not assumed active.
+      const reach = Math.max(0, Number(ownStats.attackRange ?? champ.stats.attackrange));
+      const distance = reach * 0.65;
+      const damageAmp = effects.MaxDamageAmp * clamp(distance / effects.MaxRange);
       value +=
-        item.gold.total *
-        effects.MaxDamageAmp *
-        Math.min(1, champ.stats.attackrange / effects.MaxRange) *
-        3;
-      reasons.push('Attack-range damage amplification suits a ranged carry');
+        (attackDamage + (stats.FlatPhysicalDamageMod ?? 0)) *
+        damageAmp *
+        (this.prices.get('FlatPhysicalDamageMod') ?? 35) *
+        weights.FlatPhysicalDamageMod *
+        attackFrequency;
+      reasons.push(
+        `Distance-based attack damage estimated at ${Math.round(distance)} range; maximum needs ${effects.MaxRange}. Spacing is not observed`,
+      );
     }
     if (effects.MeleeBaseShield && p.melee && !p.support) {
       value +=
@@ -654,7 +687,8 @@ export class Engine {
         (1 - p.magic) *
         effects.ShredPerStack *
         (effects.MaxStacks ?? 1) *
-        (0.8 + p.sustain * 0.5);
+        (0.8 + p.sustain * 0.5) *
+        (1 - p.innateArmorPenetration);
       reasons.push('Repeated physical damage stacks armor reduction');
     }
     if (effects.PercentCurrentHPMelee && /energized/.test(text) && p.melee && !p.support) {
@@ -673,8 +707,33 @@ export class Engine {
         effects.BaseOOCMS *
         (this.prices.get('FlatMovementSpeedMod') ?? 12) *
         (1 - p.mobility) *
-        (p.melee ? 2 : 1);
+        (p.melee ? 3 : 1);
       reasons.push('Out-of-combat movement speed supports roaming and reaching fights');
+    }
+    if (effects.MaxMovementSpeed && effects.DurationToMaxStack && p.melee && !p.support) {
+      value +=
+        effects.MaxMovementSpeed *
+        (this.prices.get('FlatMovementSpeedMod') ?? 12) *
+        (1 - p.mobility) *
+        (p.defender ? 1 : 3);
+      reasons.push('Movement builds speed between attacks to reach targets and resist kiting');
+    }
+    if (effects.SlowResistTooltip && p.melee && !p.support) {
+      // Published tooltips mix percentages (boots: 25) and fractions (plate: .15).
+      const resistance =
+        effects.SlowResistTooltip > 1 ? effects.SlowResistTooltip / 100 : effects.SlowResistTooltip;
+      value += item.gold.total * clamp(resistance) * (1 - p.mobility) * 0.25;
+      reasons.push('Published slow resistance helps a melee champion stay in attack range');
+    }
+    if (effects.BonusADRatio && effects.HealDuration && /cleanse.*remaining damage/.test(text)) {
+      // Defy healing is conditional on a takedown; discount its nominal value.
+      const bonusAD =
+        Math.max(
+          0,
+          attackDamage - growth(champ.stats.attackdamage, champ.stats.attackdamageperlevel, level),
+        ) + (stats.FlatPhysicalDamageMod ?? 0);
+      value += bonusAD * effects.BonusADRatio * (this.prices.get('FlatHPPoolMod') ?? 2.67) * 0.5;
+      reasons.push('Bonus attack damage scales the conditional takedown heal');
     }
     if (effects.BaseShieldRatio && effects.ADtoAD && p.melee) {
       value +=
@@ -781,6 +840,10 @@ export class Engine {
     const context = this.context(champ, game, role, laneWeight);
     const eligibility = { role: role || context.me?.position, owned: questOwned, spells, planning };
     const projectedStats: Record<string, number> = {
+      onHitItems: own.filter(
+        (item) =>
+          /on.hit/i.test(plain(item.description)) && !/spellblade/i.test(plain(item.description)),
+      ).length,
       offensiveItems: own.filter(
         (item) =>
           item.rules?.tier === 5 &&
@@ -1014,6 +1077,21 @@ export class Engine {
   }
   runes(champ: Champion, role = '') {
     const p = profile(champ, role);
+    role = role.toUpperCase();
+    const hardCC =
+      /stun|root|snare|knock(?:s|ed)? (?:up|back)|airborne|taunt|fear|charm|suppress/.test(p.text);
+    // Equipment named "shield" and armour-granting abilities are not shields.
+    const shield =
+      champ.spells.some((spell) => /<shield>/i.test(spell.tooltip)) ||
+      /shield(?:s|ed)? (?:himself|herself|itself)|gains? (?:a |an? [\w-]+ )?shield/i.test(
+        champ.passive.description,
+      );
+    const dash = /dash|leap|blink|teleport|stealth|invisib/.test(p.text);
+    const sustained = p.melee && !p.marksman && !p.assassin && !p.defender && !p.support;
+    const lane = role !== 'JUNGLE' && role !== 'UTILITY';
+    const energy = /energy/i.test(champ.partype);
+    const ultimate = plain(champ.spells[3]?.description ?? '').toLowerCase();
+    const damagingUltimate = /damage/.test(ultimate);
     const weights: Record<string, number> = {
       kBurstDamage: p.burst,
       kDamagePerSecond: p.attacks,
@@ -1022,6 +1100,8 @@ export class Engine {
       kMoveSpeed: 0.4 + (1 - p.mobility) * 0.3,
       kGold: 0.2,
       kHealing: p.heal * p.support,
+      kMana: p.mana ? (1 - p.attacks) * 0.65 : energy ? 0.2 : 0,
+      kCooldown: (1 - p.attacks) * 0.7,
     };
     const score = (perk: Perk) => {
       let n = sum(
@@ -1030,8 +1110,10 @@ export class Engine {
         ),
       );
       const text = plain(perk.longDesc).toLowerCase();
-      if (/mana/.test(text) && !p.mana) {
-        n -= 15;
+      // Descriptor metadata is incomplete and sometimes stale (e.g. biscuits no
+      // longer restore mana). Only penalise a resource that the current text uses.
+      if (/\bmana\b/.test(text) && !p.mana && !(/energy/.test(text) && energy)) {
+        return -100;
       }
       if (/heal|shield/.test(text)) {
         n += p.heal * p.support * 2;
@@ -1051,6 +1133,74 @@ export class Engine {
       if (/immobiliz|impaired/.test(text)) {
         n += p.cc * 2;
       }
+      // Mechanic-specific eligibility and uptime, shared by every champion.
+      // IDs identify rune mechanics, never champion builds or provider preferences.
+      switch (perk.id) {
+        case 8437: // Grasp: repeated melee lane trades, health scaling.
+          return p.melee && lane ? 8 + p.tank * 5 + (p.empoweredAttacks ? 5 : 0) : 1;
+        case 8439: // Aftershock must be triggered by immobilisation.
+          return hardCC && p.melee ? 5 + p.tank * 4 + p.support * 12 : -100;
+        case 8465: // Guardian is an ally-protection keystone.
+          return p.support && p.heal ? 13 + p.tank * 2 : -20;
+        case 8214: // Aery repeatedly shields protected allies; also supports poke.
+          return p.heal && p.support ? 23 : !p.melee && !p.marksman ? 11 : 2;
+        case 8112: // Electrocute rewards a short three-hit spell/attack combo.
+          return p.assassin || (!p.melee && !p.marksman && !p.support) ? 19 : 5;
+        case 8005: // Press the Attack: repeated attacks amplify hybrid/on-hit damage.
+          return p.marksman && p.magic > 0.5 ? 24 : p.marksman ? 20 : p.repeatedAttacks ? 17 : 5;
+        case 8008: // Lethal Tempo needs sustained basic attacks, not a single proc.
+          return p.marksman ? 22 : p.repeatedAttacks ? 16 : p.attacks * 8;
+        case 8010: // Conqueror can stack from abilities as well as attacks.
+          return sustained ? 23 : p.marksman ? 13 : 4;
+        case 8021: // Fleet trades damage for sustain and movement.
+          return p.marksman ? 14 : p.melee && lane ? 9 : 3;
+        case 9923: // Three attacks favour attack burst over extended combat.
+          return p.empoweredAttacks && p.assassin ? 17 : p.attacks * 9;
+        case 8351: // Glacial needs hard CC and protects nearby allies.
+          return hardCC && p.support ? 15 : -20;
+        case 8230: // Movement after a burst; no generic health-text bonus.
+          return sustained && p.mobility < 0.5 ? 15 : 5;
+        case 8992: // Persistent ability burn suits spell damage.
+          return !p.marksman && !p.melee && !p.heal ? 14 : 3;
+        case 8128: // Harvest requires low-health takedown opportunities.
+          return p.assassin ? 15 : 4;
+        case 8369:
+          return p.assassin || (!p.melee && !p.marksman) ? 12 : 3;
+        case 8401: // Shield Bash is unusable without a kit shield.
+          return shield ? 12 + (p.melee ? 5 : 0) : -100;
+        case 8143:
+          return dash ? 10 + p.burst * 3 : -100;
+        case 8232:
+          return role === 'JUNGLE' ? 12 : 1;
+        case 8224:
+          return damagingUltimate || /heal|shield/.test(ultimate) ? 7 + p.heal * 3 : 0;
+        case 8444:
+          return lane && p.melee ? 14 : 4;
+        case 8473:
+          return p.melee ? 10 + p.support * 3 : 5;
+        case 8453:
+          return p.heal * (p.support ? 18 : 3) + (shield ? 3 : 0) + p.sustain * 2;
+        case 8446: // Tower attacks are a lane pushing benefit, not general support utility.
+          return lane && p.melee ? 9 + p.tank * 3 : 2;
+        case 8463:
+          return /slow|stun|root|taunt|knock/.test(p.text) ? (p.support ? 14 : 5) : -100;
+        case 8316: // Diverse item stats are not guaranteed by a utility role alone.
+          return 3;
+        case 9101:
+          return lane ? 6 : 1;
+        case 9111:
+          return p.melee && !p.defender ? 12 : 5;
+        case 9105:
+          return sustained ? 13 : (1 - p.attacks) * 9;
+        case 9103:
+          return p.marksman ? 13 : 3;
+        case 8299:
+          return sustained ? 14 : 4;
+        case 8306:
+          return p.support && hardCC && p.melee ? 14 : 0;
+        case 8410:
+          return p.melee && /slow|taunt/.test(p.text) ? 12 : 2;
+      }
 
       return n;
     };
@@ -1064,7 +1214,10 @@ export class Engine {
       ...s,
       selected: s.slots.map((slot) => best(slot.perks)),
     }));
-    styles.sort((a, b) => sum(b.selected.map(score)) - sum(a.selected.map(score)) || a.id - b.id);
+    // A strong minor-rune tree must not outweigh a keystone the kit cannot use.
+    const treeScore = (s: (typeof styles)[number]) =>
+      score(s.selected[0]) * 4 + sum(s.selected.slice(1).map(score)) / 3;
+    styles.sort((a, b) => treeScore(b) - treeScore(a) || a.id - b.id);
     const primary = styles[0];
     const allowed =
       this.catalog.perkStyles.styles.find((s) => s.id === primary.id)?.allowedSubStyles ?? [];

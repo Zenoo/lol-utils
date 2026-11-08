@@ -12,5 +12,12 @@
     "status": "robots.txt blocks automated access",
     "observedAt": "2026-11-05",
     "note": "Excluded. No build facts invented or challenge bypass attempted."
+  },
+  {
+    "provider": "mobafire.com",
+    "url": "https://www.mobafire.com/league-of-legends/champion/garen-57",
+    "status": "HTTP 403",
+    "observedAt": "2026-11-05",
+    "note": "16.22 refresh unavailable via browser and direct public-page request. Earlier 16.21 references retained as historical facts and excluded from current-patch metrics."
   }
 ]

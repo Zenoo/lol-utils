@@ -1,8 +1,11 @@
 import type { z } from 'zod';
 import type * as schemas from './schema.js';
+import type { BuildSource } from './builds.js';
 
 export type Raw = Record<string, unknown>;
 export type Champion = z.infer<typeof schemas.championSchema>;
+export type ChampionKit = Pick<Champion, 'alias' | 'spells' | 'partype'>;
+export type HudLayout = z.infer<typeof schemas.hudLayoutSchema>;
 export type Spell = z.infer<typeof schemas.spellSchema>;
 export type Item = z.infer<typeof schemas.itemSchema>;
 export type Perk = z.infer<typeof schemas.perkSchema>;
@@ -18,10 +21,14 @@ export type SummonerAccount = z.infer<typeof schemas.summonerAccountSchema>;
 export interface Settings {
   flashSlot: 'D' | 'F';
   autoImport: boolean;
+  autoImportSource?: BuildSource;
   overlayEnabled: boolean;
   shopHotkey: string;
   leaguePath: string;
   role: string;
+  skillOffsetX?: number;
+  skillOffsetY?: number;
+  skillSize?: number;
 }
 export interface Recommendation {
   item: Item;
@@ -50,10 +57,12 @@ export interface OverlayState {
   buys: BuyOption[];
 }
 export interface ServiceState {
+  autoImportStatus?: string;
   draftKey?: string;
   patchWarning?: string;
   connection: string;
   selectedId: number | null;
+  selectionPreview?: boolean;
   live: (OverlayState & { level: number; gold: number }) | null;
   imports: Record<string, string>;
   clientVersion?: string;
@@ -98,13 +107,37 @@ export interface AppData {
   summoners: SummonerSpell[];
 }
 export interface CompanionBridge {
+  sourceBuilds(id: number, role: string, refresh?: boolean): Promise<SourceBuilds>;
+  importSourceBuild(id: string, parts: ImportPart[]): Promise<ServiceState>;
   init(): Promise<AppData>;
   detail(kind: string, id: number): Promise<Champion | Item | Perk | SummonerSpell | undefined>;
-  plan(id: number): Promise<Plan>;
+  plan(id: number, role?: string): Promise<Plan>;
   saveSettings(value: unknown): Promise<Settings>;
   importSelected(): Promise<ServiceState>;
   pickLeague(): Promise<string | undefined>;
   onState(callback: (state: ServiceState) => void): () => void;
+}
+export type ImportPart = 'items' | 'summoners' | 'runes';
+export interface SourceBuild {
+  mainItems?: number[];
+  population?: string;
+  itemOrder?: 'purchase' | 'inventory';
+  id: string;
+  championId: number;
+  role: string;
+  provider: string;
+  url: string;
+  patch: string;
+  label: string;
+  stats: string;
+  items: number[];
+  runes?: Plan['runes'];
+  summoners?: Plan['summoners'];
+}
+export interface SourceBuilds {
+  builds: SourceBuild[];
+  errors: string[];
+  fetchedAt: string;
 }
 export interface OverlayBridge {
   onUpdate(callback: (value: OverlayState) => void): () => void;

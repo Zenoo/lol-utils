@@ -1,0 +1,110 @@
+{
+  "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells/Ability3/Ability3_IconLoc": {
+    "name": "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells/Ability3/Ability3_IconLoc",
+    "Scene": "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells",
+    "Layer": 5,
+    "Position": {
+      "UIRect": {
+        "Position": [767, 1054],
+        "Size": [64, 64],
+        "SourceResolutionWidth": 1600,
+        "SourceResolutionHeight": 1200,
+        "__type": "UiElementRect"
+      },
+      "Anchors": {
+        "Anchor": [0.5, 1],
+        "__type": "AnchorSingle"
+      },
+      "__type": "UiPositionRect"
+    },
+    "TextureData": {
+      "mTextureName": "assets/ux/lol/clarity_hudatlas.tex",
+      "mTextureSourceResolutionWidth": 1024,
+      "mTextureSourceResolutionHeight": 1024,
+      "mTextureUV": [960, 363, 1022, 425],
+      "__type": "AtlasData"
+    },
+    "__type": "UiElementIconData"
+  },
+  "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells/Ability1/Ability1_IconLoc": {
+    "name": "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells/Ability1/Ability1_IconLoc",
+    "Scene": "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells",
+    "Layer": 5,
+    "Position": {
+      "UIRect": {
+        "Position": [619, 1054],
+        "Size": [64, 64],
+        "SourceResolutionWidth": 1600,
+        "SourceResolutionHeight": 1200,
+        "__type": "UiElementRect"
+      },
+      "Anchors": {
+        "Anchor": [0.5, 1],
+        "__type": "AnchorSingle"
+      },
+      "__type": "UiPositionRect"
+    },
+    "TextureData": {
+      "mTextureName": "assets/ux/lol/clarity_hudatlas.tex",
+      "mTextureSourceResolutionWidth": 1024,
+      "mTextureSourceResolutionHeight": 1024,
+      "mTextureUV": [960, 363, 1022, 425],
+      "__type": "AtlasData"
+    },
+    "__type": "UiElementIconData"
+  },
+  "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells/Ability2/Ability2_IconLoc": {
+    "name": "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells/Ability2/Ability2_IconLoc",
+    "Scene": "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells",
+    "Layer": 5,
+    "Position": {
+      "UIRect": {
+        "Position": [693, 1054],
+        "Size": [64, 64],
+        "SourceResolutionWidth": 1600,
+        "SourceResolutionHeight": 1200,
+        "__type": "UiElementRect"
+      },
+      "Anchors": {
+        "Anchor": [0.5, 1],
+        "__type": "AnchorSingle"
+      },
+      "__type": "UiPositionRect"
+    },
+    "TextureData": {
+      "mTextureName": "assets/ux/lol/clarity_hudatlas.tex",
+      "mTextureSourceResolutionWidth": 1024,
+      "mTextureSourceResolutionHeight": 1024,
+      "mTextureUV": [960, 363, 1022, 425],
+      "__type": "AtlasData"
+    },
+    "__type": "UiElementIconData"
+  },
+  "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells/Ability0/Ability0_IconLoc": {
+    "name": "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells/Ability0/Ability0_IconLoc",
+    "Scene": "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells",
+    "Layer": 5,
+    "Position": {
+      "UIRect": {
+        "Position": [545, 1054],
+        "Size": [64, 64],
+        "SourceResolutionWidth": 1600,
+        "SourceResolutionHeight": 1200,
+        "__type": "UiElementRect"
+      },
+      "Anchors": {
+        "Anchor": [0.5, 1],
+        "__type": "AnchorSingle"
+      },
+      "__type": "UiPositionRect"
+    },
+    "TextureData": {
+      "mTextureName": "assets/ux/lol/clarity_hudatlas.tex",
+      "mTextureSourceResolutionWidth": 1024,
+      "mTextureSourceResolutionHeight": 1024,
+      "mTextureUV": [960, 363, 1022, 425],
+      "__type": "AtlasData"
+    },
+    "__type": "UiElementIconData"
+  }
+}

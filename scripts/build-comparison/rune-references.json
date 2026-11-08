@@ -1,0 +1,145 @@
+[
+  {
+    "champion": "Shen",
+    "role": "TOP",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/shen/build/top?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:26:44.922Z",
+    "population": "Global Emerald+, ranked solo/duo; first displayed rune page",
+    "sourceSha256": "b01823740c5f01a4353de088e73a8d5a645e152c31aa19a32de8a2401cbbed4d",
+    "selectedPerkIds": [8437, 8401, 8444, 8451, 8345, 8410, 5005, 5001, 5001]
+  },
+  {
+    "champion": "Annie",
+    "role": "MIDDLE",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/annie/build/mid?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:26:46.390Z",
+    "population": "Global Emerald+, ranked solo/duo; first displayed rune page",
+    "sourceSha256": "3fa3f157b28b526a58d1fb5737854042e31fd9fa23a31af7b744a00ac4fff549",
+    "selectedPerkIds": [8112, 8126, 8140, 8105, 8224, 8233, 5008, 5008, 5001]
+  },
+  {
+    "champion": "Jinx",
+    "role": "BOTTOM",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/jinx/build/adc?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:26:47.297Z",
+    "population": "Global Emerald+, ranked solo/duo; first displayed rune page",
+    "sourceSha256": "0e388f818a4646128dadabb1514b9339f9a31cbd70a2206627108b7ff7b16b91",
+    "selectedPerkIds": [8008, 8009, 9103, 8017, 8321, 8313, 5005, 5008, 5011]
+  },
+  {
+    "champion": "Leona",
+    "role": "UTILITY",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/leona/build/support?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:26:49.368Z",
+    "population": "Global Emerald+, ranked solo/duo; first displayed rune page",
+    "sourceSha256": "ad2fc386245f0938d378ed384cbb733f119d30f6ddc448170ee08231aea0eae1",
+    "selectedPerkIds": [8439, 8463, 8444, 8451, 9111, 9105, 5007, 5001, 5001]
+  },
+  {
+    "champion": "Darius",
+    "role": "TOP",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/darius/build/top?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:26:50.685Z",
+    "population": "Global Emerald+, ranked solo/duo; first displayed rune page",
+    "sourceSha256": "764b28e05f18337377b63d1b8dc4338cb141992b2833eddc0d4ab63bc1a6e8f8",
+    "selectedPerkIds": [8010, 9111, 9104, 8299, 8224, 8234, 5005, 5008, 5001]
+  },
+  {
+    "champion": "LeeSin",
+    "role": "JUNGLE",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/leesin/build/jungle?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:26:51.472Z",
+    "population": "Global Emerald+, ranked solo/duo; first displayed rune page",
+    "sourceSha256": "1cec314b0228855266e7229e729b8d4116f3fd9b77917d7ca192a0ac403191cf",
+    "selectedPerkIds": [8010, 9111, 9104, 8014, 8304, 8347, 5005, 5008, 5001]
+  },
+  {
+    "champion": "Ahri",
+    "role": "MIDDLE",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/ahri/build/mid?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:26:52.241Z",
+    "population": "Global Emerald+, ranked solo/duo; first displayed rune page",
+    "sourceSha256": "95cd1ece27cd3064e5c82f1d7ddb792f5f00179fe233f399fd280d4e07523111",
+    "selectedPerkIds": [8112, 8139, 8140, 8106, 8226, 8210, 5005, 5008, 5001]
+  },
+  {
+    "champion": "Garen",
+    "role": "TOP",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/garen/build/top?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:26:53.020Z",
+    "population": "Global Emerald+, ranked solo/duo; first displayed rune page",
+    "sourceSha256": "09fa7418661fcb79b84793624337e80de4bc6b2b7f7dbaf82b75d67708d25181",
+    "selectedPerkIds": [8010, 9111, 9105, 8299, 8224, 8234, 5008, 5008, 5001]
+  },
+  {
+    "champion": "Soraka",
+    "role": "UTILITY",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/soraka/build/support?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:26:53.802Z",
+    "population": "Global Emerald+, ranked solo/duo; first displayed rune page",
+    "sourceSha256": "256723b8a2a3e73ad38077e263d9ceac7727420aa539cec1f289912f94be9a68",
+    "selectedPerkIds": [8214, 8226, 8210, 8237, 8473, 8453, 5008, 5008, 5001]
+  },
+  {
+    "champion": "Khazix",
+    "role": "JUNGLE",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/khazix/build/jungle?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:26:54.582Z",
+    "population": "Global Emerald+, ranked solo/duo; first displayed rune page",
+    "sourceSha256": "9504aa457b7bcb427c90c3059dd85039e343e989c46f2e663d7dbb76d80bef70",
+    "selectedPerkIds": [8369, 8321, 8313, 8347, 8143, 8135, 5008, 5008, 5001]
+  },
+  {
+    "champion": "Malphite",
+    "role": "TOP",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/malphite/build/top?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:26:55.876Z",
+    "population": "Global Emerald+, ranked solo/duo; first displayed rune page",
+    "sourceSha256": "0d203f7ee93f9a20b617d50d1c59fbc72daf005b09d33b7917bb9dbcdba481ea",
+    "selectedPerkIds": [8229, 8226, 8210, 8237, 8444, 8451, 5005, 5001, 5001]
+  },
+  {
+    "champion": "Kayle",
+    "role": "TOP",
+    "provider": "op.gg",
+    "url": "https://op.gg/lol/champions/kayle/build/top?patch=16.22&region=global&tier=emerald_plus&type=ranked",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:26:58.102Z",
+    "population": "Global Emerald+, ranked solo/duo; first displayed rune page",
+    "sourceSha256": "4fdbff2f1dd9344d637d81938c6e7cbff9b8590a989f96cbc7d6dfe891518550",
+    "selectedPerkIds": [8005, 9101, 9104, 8299, 8234, 8236, 5005, 5008, 5001]
+  },
+  {
+    "champion": "Shen",
+    "role": "TOP",
+    "provider": "lolalytics.com",
+    "url": "https://lolalytics.com/lol/shen/build/",
+    "patch": "16.22",
+    "observedAt": "2026-11-06T19:30:20.373Z",
+    "population": "Global Emerald+, ranked solo/duo; displayed default page",
+    "sourceSha256": "101c5b832e3cd3b1d309aa43f90f73a06386347b1d702729f8e81a2a98a526d1",
+    "selectedPerkIds": [8437, 8401, 8444, 8451, 8345, 8410, 5008, 5010, 5001]
+  }
+]

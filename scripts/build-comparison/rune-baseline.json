@@ -1,0 +1,80 @@
+{
+  "dataVersion": "16.22.1",
+  "catalogSha256": "4a39f6aaecc42e630546a2df9c2e24b5a84feb3f506b141a39ecd7a15e095840",
+  "engineSha256": "b20a86ad9696c0922a43918913415373d76537808061ee81f8e4d30af7487918",
+  "referencesSha256": "e69ef82977dc1a2b96065f00fae361ecdbb8212b54e6de99a62021580d5256c8",
+  "rows": [
+    {
+      "champion": "Shen",
+      "role": "TOP",
+      "group": "development",
+      "ids": [8437, 8401, 8444, 8451, 8224, 8233, 5008, 5001, 5001]
+    },
+    {
+      "champion": "Annie",
+      "role": "MIDDLE",
+      "group": "development",
+      "ids": [8112, 8126, 8140, 8106, 8210, 8224, 5007, 5008, 5001]
+    },
+    {
+      "champion": "Jinx",
+      "role": "BOTTOM",
+      "group": "development",
+      "ids": [8008, 9101, 9103, 8017, 8224, 8233, 5005, 5008, 5001]
+    },
+    {
+      "champion": "Leona",
+      "role": "UTILITY",
+      "group": "development",
+      "ids": [8439, 8463, 8473, 8451, 8306, 8410, 5007, 5001, 5001]
+    },
+    {
+      "champion": "Darius",
+      "role": "TOP",
+      "group": "development",
+      "ids": [8010, 9111, 9105, 8299, 8444, 8446, 5008, 5008, 5001]
+    },
+    {
+      "champion": "LeeSin",
+      "role": "JUNGLE",
+      "group": "development",
+      "ids": [8010, 9111, 9105, 8299, 8401, 8473, 5008, 5008, 5001]
+    },
+    {
+      "champion": "Ahri",
+      "role": "MIDDLE",
+      "group": "validation",
+      "ids": [8112, 8143, 8140, 8106, 8210, 8226, 5007, 5008, 5001]
+    },
+    {
+      "champion": "Garen",
+      "role": "TOP",
+      "group": "validation",
+      "ids": [8010, 9111, 9105, 8299, 8401, 8444, 5007, 5001, 5001]
+    },
+    {
+      "champion": "Soraka",
+      "role": "UTILITY",
+      "group": "validation",
+      "ids": [8214, 8224, 8210, 8237, 8453, 8463, 5007, 5001, 5001]
+    },
+    {
+      "champion": "Khazix",
+      "role": "JUNGLE",
+      "group": "validation",
+      "ids": [8112, 8143, 8140, 8106, 9111, 8014, 5007, 5008, 5001]
+    },
+    {
+      "champion": "Malphite",
+      "role": "TOP",
+      "group": "validation",
+      "ids": [8437, 8446, 8444, 8451, 8143, 8106, 5007, 5001, 5001]
+    },
+    {
+      "champion": "Kayle",
+      "role": "TOP",
+      "group": "validation",
+      "ids": [8005, 9111, 9103, 8017, 8444, 8446, 5005, 5008, 5001]
+    }
+  ]
+}

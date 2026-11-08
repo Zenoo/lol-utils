@@ -77,8 +77,21 @@ small {
 }
 #shop {
   box-sizing: border-box;
-  max-height: 100vh;
-  overflow: hidden;
+  height: 100vh;
+  overflow: auto;
+}
+
+.shop-handle {
+  -webkit-app-region: drag;
+  cursor: move;
+  padding: 6px 0 12px;
+  border-bottom: 1px solid #aa8a5055;
+}
+.shop-handle span {
+  display: block;
+  color: #c3cbd5;
+  font-size: 11px;
+  margin-top: 5px;
 }
 
 body:not(.skill-marker) {

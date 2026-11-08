@@ -40,6 +40,8 @@ Updates download and validate into a temporary sibling `.data-staging-*` directo
 
 GitHub Actions validates changes and builds Windows artifacts. A separate six-hour workflow checks Riot's published version, downloads a complete matching snapshot, runs validation, and proposes a data PR. Enable **Allow GitHub Actions to create pull requests** in repository settings. Generated PRs use the repository token, which does not trigger another workflow; the updater therefore runs the checks itself before opening the PR. Merging updates subsequent app builds; installed portable apps do not silently replace themselves or their game data.
 
+Derived champion mechanics and the native HUD layout are prepared by `data:update` and required in `catalog.json`. Startup validates the catalog and checksum; it does not re-read champion archives or repair missing derived fields. After changing the data schema, regenerate the same patch with `npm run data:update -- --force` and refresh development baselines. Patch-named copies of comparison reports are unnecessary; Git preserves their history.
+
 ## License and distribution
 
 The project is licensed under **PolyForm Noncommercial 1.0.0**. Game assets remain Riot's property. See [LICENSE](../LICENSE) and [NOTICE](../NOTICE).

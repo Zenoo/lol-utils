@@ -1,20 +1,22 @@
 import { BrowserWindow } from 'electron';
 import path from 'node:path';
 
-/** This renderer displays prepared text and cached item icons. It cannot focus, intercept clicks, or call the game APIs. */
+/** Prepared content only. The shop accepts drag/resize input without taking game focus. */
 export function createOverlayWindow(
   directory: string,
   kind: 'shop' | 'skill' = 'shop',
 ): BrowserWindow {
   const window = new BrowserWindow({
-    width: kind === 'skill' ? 44 : 390,
-    height: kind === 'skill' ? 44 : 480,
+    width: kind === 'skill' ? 64 : 390,
+    height: kind === 'skill' ? 64 : 480,
     show: false,
     transparent: true,
     frame: false,
     focusable: false,
     skipTaskbar: true,
-    resizable: false,
+    resizable: kind === 'shop',
+    minWidth: kind === 'shop' ? 260 : 1,
+    minHeight: kind === 'shop' ? 180 : 1,
     hasShadow: false,
     alwaysOnTop: true,
     webPreferences: {
@@ -27,7 +29,7 @@ export function createOverlayWindow(
       spellcheck: false,
     },
   });
-  window.setIgnoreMouseEvents(true);
+  window.setIgnoreMouseEvents(kind === 'skill');
   window.setAlwaysOnTop(true, 'screen-saver');
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event) => event.preventDefault());
