@@ -1,6 +1,6 @@
 {
   "name": "lol-utils",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Local, explainable League of Legends companion",
   "license": "PolyForm-Noncommercial-1.0.0",

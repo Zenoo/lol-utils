@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/Zenoo/lol-utils/compare/v0.3.0...v0.4.0) (2026-11-08)
+
+
+### Features
+
+* Source other builds ([0251da6](https://github.com/Zenoo/lol-utils/commit/0251da6f8c773a6012685372ee1b829f42c4534f))
+
+
+### Bug Fixes
+
+* CI error ([4173737](https://github.com/Zenoo/lol-utils/commit/417373728b9ea9b4e003fa205a93b8434bd9ee6e))
+
 ## [0.3.0](https://github.com/Zenoo/lol-utils/compare/v0.2.1...v0.3.0) (2026-11-05)
 
 
