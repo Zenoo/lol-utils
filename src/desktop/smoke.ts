@@ -87,6 +87,16 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
   }
+  async function settleLayout() {
+    const [width, height] = main.getContentSize();
+    // Native window resizing and Chromium's resize/scroll events are asynchronous.
+    // Those events intentionally dismiss tooltips, so finish them before hovering.
+    // Windows frame/DIP rounding can leave a one-pixel client-size difference.
+    await waitFor(`Math.abs(innerWidth - ${width}) <= 1 && Math.abs(innerHeight - ${height}) <= 1`);
+    await evaluate(
+      'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
+    );
+  }
   async function alphabetical(selector: string) {
     const ordered = await evaluate(`(() => {
       const names = Array.from(document.querySelectorAll(${JSON.stringify(selector)})).map((node) => node.textContent.trim());
@@ -300,9 +310,7 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
     const originalSize = main.getSize();
     for (const width of [900, 1240, 1600]) {
       main.setSize(width, 900);
-      await evaluate(
-        'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
-      );
+      await settleLayout();
       const fits = await evaluate(`(() => {
         const trees = Array.from(document.querySelectorAll('#plan .rune-tree'));
         const rects = trees.map(tree => tree.getBoundingClientRect());
@@ -345,8 +353,12 @@ export async function smoke(main: BrowserWindow, initialState: ServiceState) {
       path.join(artifacts, 'companion-runes.png'),
       (await main.webContents.capturePage()).toPNG(),
     );
-    await evaluate('window.scrollTo(0,0)');
     main.setSize(originalSize[0], originalSize[1]);
+    await settleLayout();
+    await evaluate(
+      'document.querySelector("#plan .build-item button").scrollIntoView({block:"center", behavior:"instant"})',
+    );
+    await settleLayout();
     await evaluate(
       'document.querySelector("#plan .build-item button").dispatchEvent(new PointerEvent("pointerover", {bubbles:true}))',
     );
